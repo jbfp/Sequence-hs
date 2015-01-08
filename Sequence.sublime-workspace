@@ -16,10 +16,10 @@
 	"buffers":
 	[
 		{
-			"file": "Sequence.cabal",
+			"file": "Program.hs",
 			"settings":
 			{
-				"buffer_size": 692,
+				"buffer_size": 45,
 				"line_ending": "Windows"
 			}
 		}
@@ -56,15 +56,16 @@
 	},
 	"file_history":
 	[
+		"/C/Users/Jakob/AppData/Roaming/Sublime Text 2/Packages/User/Default (Windows).sublime-keymap",
+		"/C/Users/Jakob/Desktop/Haskell/Sequence/Sequence.cabal",
+		"/C/Users/Jakob/Desktop/Haskell/Sequence/Setup.hs",
 		"/C/Users/Jakob/Desktop/random.hs",
 		"/C/Users/Jakob/Desktop/Haskell/Sequence/Sequence.hs",
 		"/C/Users/Jakob/Desktop/liftmtest.hs",
 		"/C/Users/Jakob/Desktop/pm.hs",
 		"/C/Users/Jakob/Desktop/Haskell/Sequence/Model.hs",
-		"/C/Users/Jakob/Desktop/Haskell/Sequence/Sequence.cabal",
 		"/C/Users/Jakob/AppData/Roaming/Sublime Text 2/Packages/User/BuildBatch.sublime-build",
 		"/C/Users/Jakob/AppData/Roaming/Sublime Text 2/Packages/Haskell/Haskell.sublime-build",
-		"/C/Users/Jakob/Desktop/Haskell/Sequence/Setup.hs",
 		"/C/Users/Jakob/Desktop/Haskell/test/test.hs",
 		"/C/Program Files/Haskell Platform/2014.2.0.0/lib/base-4.7.0.1/Data/List.p_hi",
 		"/C/Program Files/Haskell Platform/2014.2.0.0/lib/base-4.7.0.1/Data/List.hi",
@@ -109,23 +110,23 @@
 			[
 				{
 					"buffer": 0,
-					"file": "Sequence.cabal",
+					"file": "Program.hs",
 					"settings":
 					{
-						"buffer_size": 692,
+						"buffer_size": 45,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								0,
-								0
+								45,
+								45
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/Text/Plain text.tmLanguage"
+							"syntax": "Packages/Haskell/Haskell.tmLanguage"
 						},
 						"translation.x": 0.0,
 						"translation.y": 0.0,
