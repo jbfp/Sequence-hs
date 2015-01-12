@@ -4,6 +4,70 @@
 		"selected_items":
 		[
 			[
+				"curren",
+				"currentPlayer"
+			],
+			[
+				"cur",
+				"currentHand"
+			],
+			[
+				"cu",
+				"currentPlayer"
+			],
+			[
+				"numP",
+				"numPlayersPerTeam"
+			],
+			[
+				"created",
+				"created"
+			],
+			[
+				"GameI",
+				"GameIsNotOngoing"
+			],
+			[
+				"Invalid",
+				"InvalidNumberOfPlayersPerTeam"
+			],
+			[
+				"ivalid",
+				"isValidNumPlayersPerTeam"
+			],
+			[
+				"Pl",
+				"PlayerAlreadyExists"
+			],
+			[
+				"pla",
+				"playerDoesNotExist"
+			],
+			[
+				"Player",
+				"PlayersPerTeam"
+			],
+			[
+				"play",
+				"playersPerTeam"
+			],
+			[
+				"cart",
+				"cartesian"
+			],
+			[
+				"rank",
+				"Rank"
+			],
+			[
+				"pl",
+				"playersPerTeam"
+			],
+			[
+				"Num",
+				"NumPlayersPerTeam"
+			],
+			[
 				"dec",
 				"decoded"
 			],
@@ -16,20 +80,108 @@
 	"buffers":
 	[
 		{
-			"file": "Program.hs",
+			"contents": "import Sequence.Aggregate\nimport Sequence.Cards\nimport Sequence.Domain\n\nmain :: IO ()\nmain = do\n  print $ execute zero $ Create (GameId 42) (Capacity (2, 1))\n  print $ execute zero $ Join $ Human 42\n\n  print $ execute (replay [created, Joined $ Human 42]) $ Join $ Bot \"Alice\"\n  print $ execute (replay [created, Joined $ Human 42]) $ Start $ Seed 42\n\n  print $ execute (replay [created, Joined $ Human 42, Joined $ Bot \"Bob\", started]) $ PerformMove (Bot \"Bob\") (2, 2) (Card Diamonds Ace)\n  print $ (replay [created, Joined $ Human 42, Joined $ Bot \"Bob\", started])\n  print $ execute (replay [created, Joined $ Human 42, Joined $ Bot \"Bob\", started]) $ PerformMove (Bot \"Bob\") (2, 2) (Card Spades Six)\n  print $ execute (replay [created, Joined $ Human 42, Joined $ Bot \"Bob\", started]) $ PerformMove (Human 42) (2, 2) (Card Spades Ace)\n  where created = Created (GameId 42) (Capacity (2, 1))\n        started = Started (Seed 42)",
+			"file": "src/Main.hs",
+			"file_size": 946,
+			"file_write_time": 130654508573187752,
 			"settings":
 			{
-				"buffer_size": 45,
+				"buffer_size": 929,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "src/Sequence/Domain.hs",
+			"settings":
+			{
+				"buffer_size": 6378,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "src/Sequence/Cards.hs",
+			"settings":
+			{
+				"buffer_size": 2271,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "src/Sequence/Utils.hs",
+			"settings":
+			{
+				"buffer_size": 571,
+				"line_ending": "Windows",
+				"name": "module Sequence.Utils where"
+			}
+		},
+		{
+			"file": "src/Sequence/Board.hs",
+			"settings":
+			{
+				"buffer_size": 3223,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "src/Sequence/Aggregate.hs",
+			"settings":
+			{
+				"buffer_size": 314,
 				"line_ending": "Windows"
 			}
 		}
 	],
-	"build_system": "Packages/User/BuildBatch.sublime-build",
+	"build_system": "",
 	"command_palette":
 	{
-		"height": 35.0,
+		"height": 392.0,
 		"selected_items":
 		[
+			[
+				"run",
+				"SublimeHaskell: Run"
+			],
+			[
+				"haskell",
+				"SublimeHaskell: Run"
+			],
+			[
+				"sublime",
+				"SublimeHaskell: Run"
+			],
+			[
+				"build",
+				"SublimeHaskell: Rebuild"
+			],
+			[
+				"sublimehask",
+				"SublimeHaskell: Clean"
+			],
+			[
+				"sublimehaskell run",
+				"SublimeHaskell: Run"
+			],
+			[
+				"Package Control: install",
+				"Package Control: Install Package"
+			],
+			[
+				"Package Control: remove",
+				"Package Control: Remove Package"
+			],
+			[
+				"Package Control: ",
+				"Package Control: Remove Package"
+			],
+			[
+				"Haskell",
+				"Set Syntax: Haskell"
+			],
+			[
+				"Package Control: In",
+				"Package Control: Install Package"
+			],
 			[
 				"Has",
 				"Set Syntax: Haskell"
@@ -43,7 +195,7 @@
 	},
 	"console":
 	{
-		"height": 125.0
+		"height": 332.0
 	},
 	"distraction_free":
 	{
@@ -56,16 +208,45 @@
 	},
 	"file_history":
 	[
-		"/C/Users/Jakob/AppData/Roaming/Sublime Text 2/Packages/User/Default (Windows).sublime-keymap",
+		"/C/Users/Jakob/Desktop/test.hs",
 		"/C/Users/Jakob/Desktop/Haskell/Sequence/Sequence.cabal",
+		"/C/Users/Jakob/Desktop/Haskell/Sequence/build.bat",
+		"/C/Users/Jakob/Desktop/Haskell/Sequence/src/Sequence/Aggregate.hs",
+		"/C/Users/Jakob/Desktop/Cards.hs",
+		"/C/Users/Jakob/Desktop/Haskell/Sequence/src/Sequence/Cards.hs",
+		"/C/Users/Jakob/AppData/Roaming/Sublime Text 2/Packages/SublimeHaskell/Settings/SublimeHaskell.sublime-settings",
+		"/C/Users/Jakob/AppData/Roaming/Sublime Text 2/Packages/User/SublimeHaskell.sublime-settings",
+		"/C/Users/Jakob/Desktop/Haskell/Sequence/src/Main.hs",
+		"/C/Users/Jakob/Desktop/Haskell/Sequence/src/Sequence/Main.hs",
+		"/C/Users/Jakob/Desktop/Haskell/SnapTest/src/Application.hs",
+		"/C/Users/Jakob/Desktop/Haskell/SnapTest/src/Site.hs",
+		"/C/Users/Jakob/AppData/Roaming/Sublime Text 2/Packages/User/BuildBatch.sublime-build",
+		"/C/Users/Jakob/Desktop/Haskell/Sequence/Haskell.sublime-build",
+		"/C/Users/Jakob/AppData/Roaming/Sublime Text 2/Packages/Haskell/Haskell.sublime-build",
+		"/C/Users/Jakob/AppData/Roaming/Sublime Text 2/Packages/C++/C++.sublime-build",
+		"/C/Users/Jakob/Desktop/Haskell/Sequence/tests/Test.hs",
+		"/C/Users/Jakob/Desktop/Haskell/SnapTest/src/Main.hs",
+		"/C/Users/Jakob/Desktop/Haskell/SnapTest/SnapTest.cabal",
+		"/C/Users/Jakob/AppData/Roaming/Sublime Text 2/Packages/Default/Preferences.sublime-settings",
+		"/C/Users/Jakob/AppData/Roaming/Sublime Text 2/Packages/User/Preferences.sublime-settings",
+		"/C/Users/Jakob/Desktop/Haskell/Sequence/Sequence.sublime-project",
+		"/C/Users/Jakob/AppData/Roaming/Sublime Text 2/Packages/Default/Default (Windows).sublime-keymap",
+		"/C/Users/Jakob/AppData/Roaming/Sublime Text 2/Packages/User/Default (Windows).sublime-keymap",
+		"/C/Users/Jakob/Desktop/Haskell/Sequence/tests/Main.hs",
+		"/C/Users/Jakob/Desktop/Haskell/Sequence/src/Sequence.cabal",
 		"/C/Users/Jakob/Desktop/Haskell/Sequence/Setup.hs",
+		"/C/Users/Jakob/Desktop/Haskell/Sequence/Aggregate.hs",
+		"/C/Users/Jakob/Desktop/Haskell/Sequence/Program.hs",
+		"/C/Users/Jakob/Desktop/Haskell/Sequence/Cards.hs",
+		"/C/Users/Jakob/Desktop/Haskell/Sequence/MainTestSuite.hs",
+		"/C/Users/Jakob/Desktop/Haskell/Sequence/Cards",
+		"/C/Users/Jakob/Downloads/Cribbage.hs",
+		"/C/Users/Jakob/AppData/Local/Temp/Examples.hs",
 		"/C/Users/Jakob/Desktop/random.hs",
 		"/C/Users/Jakob/Desktop/Haskell/Sequence/Sequence.hs",
 		"/C/Users/Jakob/Desktop/liftmtest.hs",
 		"/C/Users/Jakob/Desktop/pm.hs",
 		"/C/Users/Jakob/Desktop/Haskell/Sequence/Model.hs",
-		"/C/Users/Jakob/AppData/Roaming/Sublime Text 2/Packages/User/BuildBatch.sublime-build",
-		"/C/Users/Jakob/AppData/Roaming/Sublime Text 2/Packages/Haskell/Haskell.sublime-build",
 		"/C/Users/Jakob/Desktop/Haskell/test/test.hs",
 		"/C/Program Files/Haskell Platform/2014.2.0.0/lib/base-4.7.0.1/Data/List.p_hi",
 		"/C/Program Files/Haskell Platform/2014.2.0.0/lib/base-4.7.0.1/Data/List.hi",
@@ -73,7 +254,7 @@
 	],
 	"find":
 	{
-		"height": 0.0
+		"height": 34.0
 	},
 	"find_in_files":
 	{
@@ -87,6 +268,12 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"null",
+			"head",
+			"tail",
+			"head",
+			"Hand",
+			"PlayerState",
 			"x"
 		],
 		"highlight": true,
@@ -95,6 +282,7 @@
 		"regex": false,
 		"replace_history":
 		[
+			""
 		],
 		"reverse": false,
 		"show_context": true,
@@ -105,28 +293,167 @@
 	"groups":
 	[
 		{
-			"selected": 0,
+			"selected": 1,
 			"sheets":
 			[
 				{
 					"buffer": 0,
-					"file": "Program.hs",
+					"file": "src/Main.hs",
 					"settings":
 					{
-						"buffer_size": 45,
+						"buffer_size": 929,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								45,
-								45
+								929,
+								929
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/Haskell/Haskell.tmLanguage"
+							"syntax": "Packages/SublimeHaskell/Syntaxes/Haskell-SublimeHaskell.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "src/Sequence/Domain.hs",
+					"settings":
+					{
+						"buffer_size": 6378,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3946,
+								3946
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/SublimeHaskell/Syntaxes/Haskell-SublimeHaskell.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 1936.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "src/Sequence/Cards.hs",
+					"settings":
+					{
+						"buffer_size": 2271,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1908,
+								1908
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/SublimeHaskell/Syntaxes/Haskell-SublimeHaskell.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 1019.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "src/Sequence/Utils.hs",
+					"settings":
+					{
+						"buffer_size": 571,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								571,
+								571
+							]
+						],
+						"settings":
+						{
+							"auto_name": "module Sequence.Utils where",
+							"syntax": "Packages/SublimeHaskell/Syntaxes/Haskell-SublimeHaskell.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "src/Sequence/Board.hs",
+					"settings":
+					{
+						"buffer_size": 3223,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3092,
+								3092
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/SublimeHaskell/Syntaxes/Haskell-SublimeHaskell.tmLanguage",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 127.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "src/Sequence/Aggregate.hs",
+					"settings":
+					{
+						"buffer_size": 314,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								314,
+								314
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/SublimeHaskell/Syntaxes/Haskell-SublimeHaskell.tmLanguage"
 						},
 						"translation.x": 0.0,
 						"translation.y": 0.0,
@@ -170,7 +497,15 @@
 	"menu_visible": true,
 	"output.exec":
 	{
-		"height": 288.0
+		"height": 183.0
+	},
+	"output.haskell_error_checker":
+	{
+		"height": 457.0
+	},
+	"output.haskell_sublime_load":
+	{
+		"height": 101.0
 	},
 	"replace":
 	{

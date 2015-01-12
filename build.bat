@@ -1,2 +1,2 @@
 @echo off
-runghc Program
+cabal run
