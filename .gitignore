@@ -15,3 +15,6 @@ cabal.config
 *.prof
 *.aux
 *.hp
+*.bat
+*.sublime-project
+*.sublime-workspace
