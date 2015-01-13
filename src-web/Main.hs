@@ -14,9 +14,10 @@ import Data.UUID (fromString, UUID)
 import Data.UUID.V4 (nextRandom)
 import Network.HTTP.Types
 import Network.Wai.Middleware.RequestLogger
-import Sequence.Aggregate
-import Sequence.Cards
-import Sequence.Domain
+import Sequence.Aggregate (apply, Error, Event, execute)
+import Sequence.Cards (Card (..))
+import Sequence.Domain (Capacity (..), Player (..), Seed (..))
+import Sequence.Game
 import Web.Scotty
 
 type GameList = MVar [Game]
@@ -33,8 +34,6 @@ app games = do
         gameId <- liftIO $ nextRandom
         game <- liftIO $ modifyMVar games $ \gs -> return ((Open gameId [] (Capacity { numTeams = 2, numPlayersPerTeam = 1 })) : gs, (Open gameId [] (Capacity { numTeams = 2, numPlayersPerTeam = 1 })))
         json game
-        --where putGame gs = (gs, Zero : gs)
-        --(\gs -> liftIO (gs, (Open gameId [] (Capacity { numTeams = 2, numPlayersPerTeam = 1 })) : gs))
 
     get "/games/:gameId" $ do
         gameId <- param "gameId"
@@ -109,8 +108,8 @@ instance ToJSON (Event Game) where
                , "card"   .= card
                , "type"   .= String "moveperformed" ]
 
-    toJSON (Ended winnerTeamIdx) =
-        object [ "winner" .= winnerTeamIdx
+    toJSON (Ended winnerTeam) =
+        object [ "winner" .= show winnerTeam
                , "type"   .= String "ended" ]
 
 instance ToJSON (Error Game) where

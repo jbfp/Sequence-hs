@@ -11,17 +11,18 @@ module Sequence.Board
 , matchesTile
 ) where
 
-import Data.List
-import Data.Maybe
-import Sequence.Cards
-import Sequence.Matrix
+import Data.List (nub, transpose)
+import Data.Maybe (catMaybes, isJust)
+import Sequence.Cards ( Suit (..), Rank (..), Card (Card))
+import Sequence.Domain (Column, Row, Team)
+import Sequence.Matrix (Matrix, diagonals)
 
-type Tile = (Maybe Int, (Int, Int))
+type Tile = (Maybe Team, (Row, Column))
 type Board = Matrix Tile
 type Sequence = [Tile]
 
 mkBoard :: Board
-mkBoard = [[(Nothing, (r, c)) | c <- [0..9 :: Int]] | r <- [0..9 :: Int]] -- Cast to Int to avoid the compiler assuming we're using Integer, not sure if necessary.
+mkBoard = [[(Nothing, (r, c)) | c <- [0..9 :: Column]] | r <- [0..9 :: Row]] -- Cast to Int to avoid the compiler assuming we're using Integer, not sure if necessary.
 
 possibleSequences :: Board -> [Sequence]
 possibleSequences board = horizontal ++ vertical ++ diagonal
@@ -29,14 +30,14 @@ possibleSequences board = horizontal ++ vertical ++ diagonal
           vertical = transpose board
           diagonal = diagonals board
 
-isWinner :: Board -> Int -> Bool
-isWinner board i =
-    any (\l -> length (getSequencesForTeam i l) == 2) $ possibleSequences board
+isWinner :: Board -> Team -> Bool
+isWinner board team =
+    any (\l -> length (getSequencesForTeam team l) == 2) $ possibleSequences board
 
 getTile :: Board -> Int -> Int -> Tile
 getTile board row column = ((board !! row) !! column)
 
-getSequence' :: Sequence -> [Tile] -> Maybe Int -> [Sequence]
+getSequence' :: Sequence -> [Tile] -> Maybe Team -> [Sequence]
 getSequence' _ [] _     = []
 getSequence' (acc@(x:_)) (list@(y@(ty, _):ys)) team
     | (length acc) == 5 =
@@ -46,10 +47,10 @@ getSequence' (acc@(x:_)) (list@(y@(ty, _):ys)) team
     | ty == team        = getSequence' (y : acc) ys team
     | otherwise         = getSequence' [] ys team
 
-getSequencesForTeam :: Int -> [Tile] -> [Sequence]
+getSequencesForTeam :: Team -> [Tile] -> [Sequence]
 getSequencesForTeam team tiles = getSequence' [] tiles (Just team)
 
-getAllSequences :: [Tile] -> [(Int, [Sequence])]
+getAllSequences :: [Tile] -> [(Team, [Sequence])]
 getAllSequences tiles = fmap (\t -> (t, getSequencesForTeam t tiles)) teams
     where teams = nub $ catMaybes $ fmap (fst) $ filter (\(team, _) -> isJust team) tiles -- nub removes duplicates, catMaybes throws out Nothings.
 
@@ -77,7 +78,7 @@ ranks = [[Nothing,    Just Six,   Just Seven, Just Eight, Just Nine,  Just Ten, 
          [Just Ten,   Just Ten,   Just Queen, Just King,  Just Ace,   Just Two,  Just Three, Just Four,  Just Five,  Just Six],
          [Nothing,    Just Nine,  Just Eight, Just Seven, Just Six,   Just Five, Just Four,  Just Three, Just Two,   Nothing]]
 
-matchesTile :: Card -> Int -> Int -> Bool
+matchesTile :: Card -> Row -> Column -> Bool
 matchesTile card row column =
   case (suit, rank) of
     (Just s, Just r) -> (Card s r) == card

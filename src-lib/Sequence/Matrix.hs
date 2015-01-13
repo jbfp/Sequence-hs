@@ -3,7 +3,7 @@ module Sequence.Matrix
 , diagonals
 ) where
 
-import Data.List
+import Data.List (tails, transpose)
 
 type Matrix a = [[a]]
 
