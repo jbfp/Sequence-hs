@@ -3,15 +3,8 @@ module Sequence.Domain where
 import Data.UUID (UUID)
 import Sequence.Cards (Card)
 
-newtype Seed = Seed Int
 type Row = Int
 type Column = Int
-
-instance Show Seed where
-  show (Seed x) = show x
-
-instance Eq Seed where
-  (Seed l) == (Seed r) = l == r
 
 data Team = Red | Green | Blue deriving (Show, Read, Eq, Enum)
 data Capacity = Capacity { numTeams :: Int, numPlayersPerTeam :: Int } deriving (Show, Read)

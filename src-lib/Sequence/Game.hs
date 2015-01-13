@@ -3,12 +3,14 @@
 module Sequence.Game where
 
 import Control.Monad.State (runState)
+import Control.Monad.Trans (liftIO)
 import Data.Maybe (maybeToList)
 import Data.UUID (UUID)
-import Sequence.Aggregate (Aggregate, Error, Command, Event, execute, apply, zero)
+import Sequence.Aggregate (Aggregate, Error, Command, Event, execute, executeIO, apply, zero)
 import Sequence.Board (Board, getAllSequences, getTile, isWinner, matchesTile, mkBoard, possibleSequences)
 import Sequence.Cards (Card (..), dealHands, Deck, getNumCards, makeShuffledDeck, Rank (..), Suit (..))
-import Sequence.Domain (Capacity, Column, hand, numTeams, numPlayersPerTeam, Player, PlayerState (..), Row, Seed (..), Team)
+import Sequence.Domain (Capacity, Column, hand, numTeams, numPlayersPerTeam, Player, PlayerState (..), Row, Team)
+import Sequence.Seed (newSeed, Seed (..))
 import Sequence.Utils (removeFirst, mapi, pop, replace')
 import System.Random (mkStdGen)
 
@@ -70,10 +72,10 @@ instance Aggregate Game where
   execute game (Join p) =
     case game of
       Open _ players capacity -> do
-        let mp = maxPlayers capacity
+        let mp = maxPlayers capacity        
         confirm (notFull mp players) GameIsFull
         confirm (playerDoesNotExist p players) PlayerAlreadyExists
-        return $ (Joined p) : (if (isFull mp (p : players)) then [Started $ Seed 42] else [])
+        return [Joined p]
       _ -> Left GameIsNotOpen
 
   -- Start game.
@@ -106,6 +108,20 @@ instance Aggregate Game where
               confirmTileIsNotPartOfSequence = confirm (isNotPartOfSequence board row column) TileIsPartOfSequence
               confirmTileIsEmpty = confirm (tileIsEmpty board row column) TileIsNotEmpty
       _ -> Left GameIsNotOngoing
+
+  -- Join game that starts when full.
+  -- TODO: Make pretty :3
+  executeIO game join@(Join _) = do    
+    case (execute game join) of
+        Right events ->
+            case (foldl apply game events) of
+                Open _ players capacity -> do
+                    let mp = maxPlayers capacity
+                    seed <- newSeed
+                    liftIO $ print events
+                    return $ Right $ events ++ (if (isFull mp players) then [Started seed] else [])
+                _ -> return $ Left GameIsNotOpen
+        Left err -> return $ Left err
 
   apply Zero (Created gameId capacity) =
     Open gameId [] capacity

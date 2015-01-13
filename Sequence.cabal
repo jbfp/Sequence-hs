@@ -29,6 +29,7 @@ library
                      , Sequence.Domain
                      , Sequence.Game
                      , Sequence.Matrix
+                     , Sequence.Seed
                      , Sequence.Utils
   ghc-options:         -Wall
   hs-source-dirs:      src-lib

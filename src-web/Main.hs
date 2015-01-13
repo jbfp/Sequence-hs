@@ -14,9 +14,9 @@ import Data.UUID (fromString, UUID)
 import Data.UUID.V4 (nextRandom)
 import Network.HTTP.Types
 import Network.Wai.Middleware.RequestLogger
-import Sequence.Aggregate (apply, Error, Event, execute)
+import Sequence.Aggregate (apply, Error, Event, execute, executeIO)
 import Sequence.Cards (Card (..))
-import Sequence.Domain (Capacity (..), Player (..), Seed (..))
+import Sequence.Domain (Capacity (..), Player (..))
 import Sequence.Game
 import Web.Scotty
 
@@ -32,7 +32,7 @@ app games = do
 
     post "/games" $ do
         gameId <- liftIO $ nextRandom
-        game <- liftIO $ modifyMVar games $ \gs -> return ((Open gameId [] (Capacity { numTeams = 2, numPlayersPerTeam = 1 })) : gs, (Open gameId [] (Capacity { numTeams = 2, numPlayersPerTeam = 1 })))
+        game <-  liftIO $ modifyMVar games $ \gs -> return ((Open gameId [] (Capacity { numTeams = 2, numPlayersPerTeam = 1 })) : gs, (Open gameId [] (Capacity { numTeams = 2, numPlayersPerTeam = 1 })))
         json game
 
     get "/games/:gameId" $ do
@@ -41,9 +41,13 @@ app games = do
 
     post "/games/:gameId/players/:playerId" $ do
         gameId <- param "gameId"
-        playerId <- param "playerId"        
-        let event = execute (Open gameId [Bot "Bob"] (Capacity { numTeams = 2, numPlayersPerTeam = 1 })) $ Join $ Human playerId
-        case event of
+        let game = (Open gameId [Bot "Bob"] (Capacity { numTeams = 2, numPlayersPerTeam = 1 }))
+
+        playerId <- param "playerId"
+        let player = Human playerId
+
+        events <- liftIO $ executeIO game $ Join player        
+        case events of
             Right a -> do status status200; json a
             Left e -> do status status400; json e
 
@@ -98,8 +102,8 @@ instance ToJSON (Event Game) where
         object [ "player" .= p
                , "type"   .= String "joined" ]
 
-    toJSON (Started (Seed seed)) =
-        object [ "seed" .= seed
+    toJSON (Started seed) =
+        object [ "seed" .= show seed
                , "type" .= String "started" ]
 
     toJSON (MovePerformed row column card) =
