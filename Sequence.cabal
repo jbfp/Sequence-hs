@@ -21,6 +21,7 @@ library
                      , mtl
                      , random
                      , random-shuffle
+                     , uuid
   default-language:    Haskell2010
   exposed-modules:     Sequence.Aggregate, Sequence.Board, Sequence.Cards, Sequence.Domain, Sequence.Matrix, Sequence.Utils
   ghc-options:         -Wall
@@ -30,10 +31,15 @@ executable Sequence.Api
   buildable:          True
   build-depends:      aeson
                     , base
-                    , bytestring
+                    , http-types
+                    , mtl
+                    , random
+                    , scotty
                     , Sequence
                     , text
-                    , yesod
+                    , transformers
+                    , uuid
+                    , wai-extra
   default-language:   Haskell2010
   main-is:            Main.hs
   hs-source-dirs:     src-web

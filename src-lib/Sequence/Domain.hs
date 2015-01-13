@@ -1,21 +1,29 @@
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Sequence.Domain where
 
 import Control.Monad.State
 import Data.Maybe
+import Data.UUID
 import Sequence.Aggregate
 import Sequence.Board
 import Sequence.Cards
 import Sequence.Utils (removeFirst, mapi, pop, replace')
 import System.Random (mkStdGen)
 
-newtype Seed = Seed Int deriving (Show, Read, Eq)
-newtype GameId = GameId Int deriving (Show, Read, Eq)
+newtype Seed = Seed Int
+
+instance Show Seed where
+  show (Seed x) = show x
+
+instance Eq Seed where
+  (Seed l) == (Seed r) = l == r
+
 data Team = Red | Green | Blue deriving (Show, Read, Eq, Enum)
 data Capacity = Capacity { numTeams :: Int, numPlayersPerTeam :: Int } deriving (Show, Read)
 data TileChange = TileChange Tile Int Int Card deriving (Show, Eq)
-data Player = Human Int
+data Player = Human UUID
             | Bot String
 
 instance Eq Player where
@@ -33,8 +41,8 @@ data PlayerState = PlayerState { player :: Player
                                deriving (Show)
 
 data Game = Zero
-          | Open GameId [Player] Capacity
-          | Playing Deck [PlayerState] Board
+          | Open UUID [Player] Capacity
+          | Playing Deck [PlayerState] Board -- TODO: Prepend ! to Board for strictness?
           | Over [Player] -- TODO: stats, antal sekvenser for hvert hold osv.
 
 instance Show Game where
@@ -61,14 +69,14 @@ instance Aggregate Game where
                   | TileIsPartOfSequence
                   deriving (Show)
 
-  data Event Game = Created GameId Capacity
+  data Event Game = Created UUID Capacity
                   | Joined Player
                   | Started Seed
                   | MovePerformed Int Int Card
                   | Ended Int
                   deriving (Show)
 
-  data Command Game = Create GameId Capacity
+  data Command Game = Create UUID Capacity
                     | Join Player
                     | Start Seed
                     | PerformMove Player Int Int Card
