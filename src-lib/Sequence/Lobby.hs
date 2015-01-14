@@ -27,8 +27,8 @@ confirm f x e
     | f x = Right ()
     | otherwise = Left e
 
-joinLobby :: Lobby -> Player -> Either LobbyError Lobby
-joinLobby lobby@(Lobby _ cap ps) player = do    
+joinLobby :: Player -> Lobby -> Either LobbyError Lobby
+joinLobby player lobby@(Lobby _ cap ps) = do    
     let mp = (numTeams cap) * (numPlayersPerTeam cap)
     confirm (notFull mp) ps LobbyIsFull
     confirm (playerDoesNotExist player) ps PlayerAlreadyExists

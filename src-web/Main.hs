@@ -5,18 +5,23 @@
 module Sequence.Api where
 
 import Control.Concurrent.MVar (MVar, newMVar, withMVar, modifyMVar_)
+import Control.Monad (liftM)
 import Control.Monad.Trans (liftIO)
 import Data.Aeson hiding (json)
+import qualified Data.ByteString as BS
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Lazy as TL
-import Data.UUID (fromString, UUID)
+import Data.UUID (fromString, nil, UUID)
 import GHC.Generics
 import Network.HTTP.Types
+import Network.Wai
 import Network.Wai.Middleware.RequestLogger
 import Sequence.Api.Json ()
 import Sequence.Capacity (mkCapacity)
 import Sequence.Game hiding (players)
 import Sequence.Lobby
+import Sequence.Player
 import Sequence.Seed
 import Web.Scotty
 
@@ -32,21 +37,41 @@ app lobbyList gameList = do
         json lobbies
 
     post "/lobbies/:lobbyId" $ do
+        -- Get lobby ID from URL param.        
         lId <- param "lobbyId"
-        req <- jsonData
 
-        -- Validate capacity.
-        let nt = numTeams req
-        let nppt = numPlayersPerTeam req
-        let validatedCapacity = mkCapacity nt nppt
+        -- Get user ID from authorization header.
+        req <- request
+        let reqHeaders = requestHeaders req
+        let authorization = lookup "Authorization" reqHeaders
 
-        case validatedCapacity of
-            Left err -> do status status400; json $ String $ T.pack $ show err
-            Right c -> do
-                let lobby = Lobby { lobbyId = lId, capacity = c, players = []}
-                liftIO $ modifyMVar_ lobbyList (\lobbies -> return $ lobby : lobbies)
-                status status201
-                json lobby
+        case authorization of
+            Nothing -> do status status401
+            Just value -> do
+                let playerId = fromString $ T.unpack $ TE.decodeUtf8 value
+
+                case playerId of
+                    Nothing -> do status status401
+                    Just pId -> do
+                        let human = Human pId
+
+                        -- Validate capacity from request body.        
+                        requestBodyJson <- jsonData
+                        let nt = numTeams requestBodyJson
+                        let nppt = numPlayersPerTeam requestBodyJson
+                        let validatedCapacity = mkCapacity nt nppt
+
+                        case validatedCapacity of
+                            Left err -> do status status400; json $ String $ T.pack $ show err
+                            Right c -> do
+                                let lobby = Lobby { lobbyId = lId, capacity = c, players = []}
+
+                                case human `joinLobby` lobby of
+                                    Left err' -> do status status500; json $ String $ T.pack $ show err'
+                                    Right lobby' -> do
+                                        liftIO $ modifyMVar_ lobbyList (\lobbies -> return $ lobby' : lobbies)
+                                        status status201
+                                        json lobby'
     
     get "/games" $ do        
         games <- liftIO $ withMVar gameList (return)        
