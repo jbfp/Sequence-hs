@@ -38,8 +38,12 @@ executable Sequence.Api
   buildable:          True
   build-depends:      aeson
                     , base
+                    , bytestring
                     , http-types
                     , mtl
+                    , persistent
+                    , persistent-sqlite
+                    , persistent-template
                     , random
                     , scotty
                     , Sequence

@@ -3,28 +3,29 @@
 module Sequence.Game where
 
 import Control.Monad.State (runState)
-import Control.Monad.Trans (liftIO)
 import Data.Maybe (maybeToList)
 import Data.UUID (UUID)
 import Sequence.Aggregate (Aggregate, Error, Command, Event, execute, executeIO, apply, zero)
 import Sequence.Board (Board, getAllSequences, getTile, isWinner, matchesTile, mkBoard, possibleSequences)
 import Sequence.Cards (Card (..), dealHands, Deck, getNumCards, makeShuffledDeck, Rank (..), Suit (..))
-import Sequence.Domain (Capacity, Column, hand, numTeams, numPlayersPerTeam, Player, PlayerState (..), Row, Team)
+import Sequence.Domain (Capacity, Column, hand, numTeams, numPlayersPerTeam, Player, PlayerState (..), Row, Team, Version)
 import Sequence.Seed (newSeed, Seed (..))
 import Sequence.Utils (removeFirst, mapi, pop, replace')
 import System.Random (mkStdGen)
 
 data Game = Zero
-          | Open UUID [Player] Capacity
-          | Playing Deck [PlayerState] Board -- TODO: Prepend ! to Board for strictness?
-          | Over [Player] -- TODO: stats, antal sekvenser for hvert hold osv.
+          | Open UUID [Player] Capacity Version
+          | Playing Deck [PlayerState] Board Version -- TODO: Prepend ! to Board for strictness?
+          | Over [Player] Version -- TODO: stats, antal sekvenser for hvert hold osv.
 
 instance Show Game where
   show Zero = "Zero"
-  show (Open gameId players _) = "Open - Id: " ++ show gameId ++ ", Players: " ++ show players  
-  show (Playing deck (p:_) _) = "Playing - Cards left in deck: " ++ show (length deck) ++ ", " ++
-                                "Current player: " ++ show p ++ ", " ++
-                                "Hand: " ++ show (hand p)
+  show (Open gameId players _ v) = "Open - Id: " ++ show gameId ++ ", Players: " ++ show players ++ ", Version: " ++ show v
+  show (Playing deck (p:_) _ v) = "Playing - Cards left in deck: " ++ show (length deck) ++ ", " ++
+                                   "Current player: " ++ show p ++ ", " ++
+                                   "Hand: " ++ show (hand p) ++ ", " ++
+                                   "Version: " ++ show v
+  show (Over winners v) = "Over - Winners: " ++ show winners ++ ", Version: " ++ show v
 
 instance Aggregate Game where
   data Error Game = InvalidNumberOfTeams
@@ -71,7 +72,7 @@ instance Aggregate Game where
   -- Join game.
   execute game (Join p) =
     case game of
-      Open _ players capacity -> do
+      Open _ players capacity _ -> do
         let mp = maxPlayers capacity        
         confirm (notFull mp players) GameIsFull
         confirm (playerDoesNotExist p players) PlayerAlreadyExists
@@ -81,7 +82,7 @@ instance Aggregate Game where
   -- Start game.
   execute game (Start seed) =
     case game of
-      Open _ players capacity -> do
+      Open _ players capacity _ -> do
         confirm (isFull (maxPlayers capacity) players) GameIsNotFull
         return [Started seed]
       _ -> Left GameIsNotOpen
@@ -89,7 +90,7 @@ instance Aggregate Game where
   -- Perform move.
   execute game (PerformMove p row column card@(Card suit rank)) =
     case game of
-      Playing _ (currentPlayer : players) board -> do        
+      Playing _ (currentPlayer : players) board _ -> do        
         confirm (isPlayersTurn players p) ItIsNotYourTurn
         confirm (hasCard card currentHand) DoesNotHaveCard
         
@@ -115,22 +116,21 @@ instance Aggregate Game where
     case (execute game join) of
         Right events ->
             case (foldl apply game events) of
-                Open _ players capacity -> do
+                Open _ players capacity _ -> do
                     let mp = maxPlayers capacity
-                    seed <- newSeed
-                    liftIO $ print events
+                    seed <- newSeed                    
                     return $ Right $ events ++ (if (isFull mp players) then [Started seed] else [])
                 _ -> return $ Left GameIsNotOpen
         Left err -> return $ Left err
 
   apply Zero (Created gameId capacity) =
-    Open gameId [] capacity
+    Open gameId [] capacity 1
 
-  apply (Open gameId ps capacity) (Joined p) =
-    Open gameId (p : ps) capacity
+  apply (Open gameId ps capacity version) (Joined p) =
+    Open gameId (p : ps) capacity (version + 1)
 
-  apply (Open _ players capacity) (Started (Seed seed)) =
-    Playing deck mappedPlayers mkBoard
+  apply (Open _ players capacity version) (Started (Seed seed)) =
+    Playing deck mappedPlayers mkBoard (version + 1)
       where rng = mkStdGen seed
             shuffledDeck = makeShuffledDeck rng
             numPlayers = length players
@@ -139,16 +139,17 @@ instance Aggregate Game where
             (hands, deck) = runState (dealHands numPlayers numCardsPerPlayer) shuffledDeck
             mappedPlayers = mapi (\i p -> PlayerState { player = p, team = toEnum $ (i `mod` nppt), hand = (hands !! i) }) players
   
-  apply (Playing deck (currentPlayer:players) board) (MovePerformed row column card) =
-    Playing rest (players ++ [modifiedPlayer]) board'
+  apply (Playing deck (currentPlayer:players) board version) (MovePerformed row column card) =
+    Playing rest (players ++ [modifiedPlayer]) board' (version + 1)
       where currentHand = removeFirst card $ hand currentPlayer -- remove the card the player has used.
             (newCard, rest) = pop deck -- get a new card for him/her, if there is one. TODO: tomt deck.
             modifiedPlayer = currentPlayer { hand = currentHand ++ (maybeToList newCard) } -- maybeToList turns Nothing into [] and Just a into [a].
             value = (Just $ team currentPlayer, (row, column))
             board' = replace' row column value board
 
-  apply (Playing _ players _) (Ended winnerTeam) = 
-    Over $ fmap (\p -> player p) $ filter (\p -> team p == winnerTeam) players
+  apply (Playing _ players _ version) (Ended winnerTeam) = 
+    Over winners (version + 1)
+      where winners = fmap (\p -> player p) $ filter (\p -> team p == winnerTeam) players
 
   apply _ _ = error "Cannot apply event to state."
 

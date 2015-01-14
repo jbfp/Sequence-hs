@@ -5,6 +5,7 @@ import Sequence.Cards (Card)
 
 type Row = Int
 type Column = Int
+type Version = Int
 
 data Team = Red | Green | Blue deriving (Show, Read, Eq, Enum)
 data Capacity = Capacity { numTeams :: Int, numPlayersPerTeam :: Int } deriving (Show, Read)
