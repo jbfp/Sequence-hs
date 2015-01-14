@@ -1,4 +1,7 @@
-module Sequence.Seed where
+module Sequence.Seed
+( Seed (..)
+, newSeed
+) where
 
 import System.Random (newStdGen, random)
 

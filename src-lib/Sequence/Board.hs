@@ -1,5 +1,7 @@
 module Sequence.Board
-( Tile
+( Row
+, Column
+, Tile
 , Board
 , Sequence
 , mkBoard
@@ -14,9 +16,11 @@ module Sequence.Board
 import Data.List (nub, transpose)
 import Data.Maybe (catMaybes, isJust)
 import Sequence.Cards ( Suit (..), Rank (..), Card (Card))
-import Sequence.Domain (Column, Row, Team)
+import Sequence.Player (Team)
 import Sequence.Matrix (Matrix, diagonals)
 
+type Row = Int
+type Column = Int
 type Tile = (Maybe Team, (Row, Column))
 type Board = Matrix Tile
 type Sequence = [Tile]

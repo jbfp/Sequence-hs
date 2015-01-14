@@ -23,12 +23,13 @@ library
                      , random-shuffle
                      , uuid
   default-language:    Haskell2010
-  exposed-modules:     Sequence.Aggregate
-                     , Sequence.Board
+  exposed-modules:     Sequence.Board
+                     , Sequence.Capacity
                      , Sequence.Cards
-                     , Sequence.Domain
                      , Sequence.Game
+                     , Sequence.Lobby
                      , Sequence.Matrix
+                     , Sequence.Player
                      , Sequence.Seed
                      , Sequence.Utils
   ghc-options:         -Wall
