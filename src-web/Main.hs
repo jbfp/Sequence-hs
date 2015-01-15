@@ -4,9 +4,11 @@
 
 module Sequence.Api where
 
-import Control.Concurrent.MVar (MVar, newMVar, withMVar, modifyMVar_)
+import Control.Concurrent
+import Control.Concurrent.MVar
 import Control.Monad.Trans (liftIO)
 import Data.Aeson hiding (json)
+import Data.List
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -52,9 +54,10 @@ app lobbyList gameList = do
 
     get "/lobbies" $ getLobbies lobbyList
     post "/lobbies/:lobbyId" $ createLobby lobbyList
+    post "/lobbies/:lobbyId/players" $ postJoinLobby lobbyList gameList
     
     get "/games" $ getGames gameList
-    get "/games/:gameId" $ getGame
+    get "/games/:gameId" $ getGame gameList
 
 getLobbies :: LobbyList -> ActionResult
 getLobbies lobbyList = do
@@ -94,16 +97,61 @@ createLobby lobbyList = do
             status status201
             json lobby'
 
+postJoinLobby :: LobbyList -> GameList -> ActionResult
+postJoinLobby lobbyList gameList = do
+    -- Get user ID from authorization header.    
+    playerId <- do
+        authorization <- header "Authorization"
+        val <- return $ fromString $ TL.unpack $ fromMaybe "" $ authorization
+        case val of
+            Nothing -> raise Unauthorized
+            Just pId -> return pId
+
+    let human = Human playerId
+    
+    -- Get lobby ID from URL param.
+    lId <- param "lobbyId"
+
+    -- Get the lobby by ID.
+    lobby <- liftIO $ modifyMVar lobbyList (\lobbies -> do
+        let maybeIndex = findIndex (\lobby -> (lobbyId lobby) == lId) lobbies
+        case maybeIndex of
+            Nothing -> return (lobbies, Left NotFound)
+            Just idx -> do
+                let (left, (lobby:right)) = splitAt idx lobbies
+
+                case human `joinLobby` lobby of
+                    Left err -> return (lobbies, Left $ InternalServerError $ show err)
+                    Right lobby' -> do
+                        if isFull lobby' then
+                            return (left ++ right, Right lobby')
+                        else
+                            return (lobby' : (left ++ right), Right lobby'))
+
+    case lobby of
+        Left err -> raise err
+        Right l -> do 
+            -- Start game if full.
+            if isFull l then do
+                seed <- liftIO $ newSeed
+                let game = mkGame lId (players l) seed
+                liftIO $ modifyMVar_ gameList (\games -> return $ game : games)
+                json game
+            else json l
+
 getGames :: GameList -> ActionResult
 getGames gameList = do
     games <- liftIO $ withMVar gameList (return)
     json games
 
-getGame :: ActionResult
-getGame = do
+getGame :: GameList -> ActionResult
+getGame gameList = do
     gId <- param "gameId"
-    seed <- liftIO $ newSeed
-    json $ mkGame gId [] seed
+    games <- liftIO $ withMVar gameList (return)
+    
+    case (find (\g -> (gameId g) == gId) games) of
+        Nothing -> raise NotFound
+        Just game -> json game
 
 instance Parsable UUID where
     parseParam t = maybeToEither "Could not parse UUID." $ fromString $ TL.unpack t
