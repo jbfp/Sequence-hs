@@ -38,55 +38,65 @@ app :: LobbyList -> GameList -> ScottyM ()
 app lobbyList gameList = do
     middleware logStdoutDev
 
-    get "/lobbies" $ do        
-        lobbies <- liftIO $ withMVar lobbyList (return)        
-        json lobbies
-
-    post "/lobbies/:lobbyId" $ do
-        -- Get lobby ID from URL param.        
-        lId <- param "lobbyId"
-
-        -- Get user ID from authorization header.
-        req <- request
-        let reqHeaders = requestHeaders req
-        let authorization = lookup "Authorization" reqHeaders
-
-        case authorization of
-            Nothing -> do status status401
-            Just value -> do
-                let playerId = fromString $ T.unpack $ TE.decodeUtf8 value
-
-                case playerId of
-                    Nothing -> do status status401
-                    Just pId -> do
-                        let human = Human pId
-
-                        -- Validate capacity from request body.        
-                        requestBodyJson <- jsonData
-                        let nt = numTeams requestBodyJson
-                        let nppt = numPlayersPerTeam requestBodyJson
-                        let validatedCapacity = mkCapacity nt nppt
-
-                        case validatedCapacity of
-                            Left err -> do status status400; json $ String $ T.pack $ show err
-                            Right c -> do
-                                let lobby = Lobby { lobbyId = lId, capacity = c, players = []}
-
-                                case human `joinLobby` lobby of
-                                    Left err' -> do status status500; json $ String $ T.pack $ show err'
-                                    Right lobby' -> do
-                                        liftIO $ modifyMVar_ lobbyList (\lobbies -> return $ lobby' : lobbies)
-                                        status status201
-                                        json lobby'
+    get "/lobbies" $ getLobbies lobbyList
+    post "/lobbies/:lobbyId" $ createLobby lobbyList
     
-    get "/games" $ do        
-        games <- liftIO $ withMVar gameList (return)        
-        json games
+    get "/games" $ getGames gameList
+    get "/games/:gameId" $ getGame
 
-    get "/games/:gameId" $ do
-        gId <- param "gameId"
-        seed <- liftIO $ newSeed
-        json $ mkGame gId [] seed
+getLobbies :: LobbyList -> ActionM ()
+getLobbies lobbyList = do
+    lobbies <- liftIO $ withMVar lobbyList (return)
+    json lobbies
+
+createLobby :: LobbyList -> ActionM ()
+createLobby lobbyList = do
+    -- Get lobby ID from URL param.
+    lId <- param "lobbyId"
+
+    -- Get user ID from authorization header.
+    req <- request
+    let reqHeaders = requestHeaders req
+    let authorization = lookup "Authorization" reqHeaders
+
+    case authorization of
+        Nothing -> do status status401
+        Just value -> do
+            let playerId = fromString $ T.unpack $ TE.decodeUtf8 value
+
+            case playerId of
+                Nothing -> do status status401
+                Just pId -> do
+                    let human = Human pId
+
+                    -- Validate capacity from request body.
+                    requestBodyJson <- jsonData
+                    let nt = numTeams requestBodyJson
+                    let nppt = numPlayersPerTeam requestBodyJson
+                    let validatedCapacity = mkCapacity nt nppt
+
+                    case validatedCapacity of
+                        Left err -> do status status400; json $ String $ T.pack $ show err
+                        Right c -> do
+                            let lobby = Lobby { lobbyId = lId, capacity = c, players = []}
+
+                            case human `joinLobby` lobby of
+                                Left err' -> do status status500; json $ String $ T.pack $ show err'
+                                Right lobby' -> do
+                                    liftIO $ modifyMVar_ lobbyList (\lobbies -> return $ lobby' : lobbies)
+                                    status status201
+                                    json lobby'
+
+getGames :: GameList -> ActionM ()
+getGames gameList = do
+    games <- liftIO $ withMVar gameList (return)
+    json games
+
+getGame :: ActionM ()
+getGame = do
+    gId <- param "gameId"
+    seed <- liftIO $ newSeed
+    json $ mkGame gId [] seed
 
 instance Parsable UUID where
     parseParam t = maybeToEither "Could not parse UUID." $ fromString $ TL.unpack t
