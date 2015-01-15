@@ -4,6 +4,7 @@ module Sequence.Capacity
 , numPlayersPerTeam
 , CapacityError (..)
 , mkCapacity
+, numPlayers
 ) where
 
 import Control.Applicative ((<$>), (<*>))
@@ -16,6 +17,9 @@ data Capacity = CapacityT
 data CapacityError = InvalidNumTeams
                    | InvalidNumPlayersPerTeam
                    deriving (Show)
+
+numPlayers :: Capacity -> Int
+numPlayers (CapacityT nt nppt) = nt * nppt
 
 mkCapacity :: Int -> Int -> Either CapacityError Capacity
 mkCapacity nt nppt = CapacityT
