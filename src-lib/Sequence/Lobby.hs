@@ -2,6 +2,7 @@ module Sequence.Lobby
 ( Lobby (..)
 , LobbyError
 , joinLobby
+, isFull
 ) where
 
 import Data.UUID (UUID)
@@ -21,6 +22,9 @@ data LobbyError = PlayerAlreadyExists
                 | LobbyIsFull
                 | LobbyIsNotFull
                 deriving (Show)
+
+isFull :: Lobby -> Bool
+isFull (Lobby _ cap ps) = (length ps) == (numPlayers cap)
 
 confirm :: (a -> Bool) -> a -> e -> Either e ()
 confirm f x e
