@@ -48,8 +48,8 @@ getSequence' (acc@(x:_)) (list@(y@(ty, _):ys)) team
         let rest = x : list -- We append the head of the sequence, since one tile can be shared.
             sequences = getSequence' [] rest team
         in  acc : sequences
-    | ty == team        = getSequence' (y : acc) ys team
-    | otherwise         = getSequence' [] ys team
+    | ty == team = getSequence' (y : acc) ys team
+    | otherwise  = getSequence' [] ys team
 
 getSequencesForTeam :: Team -> [Tile] -> [Sequence]
 getSequencesForTeam team tiles = getSequence' [] tiles (Just team)
@@ -84,8 +84,8 @@ ranks = [[Nothing,    Just Six,   Just Seven, Just Eight, Just Nine,  Just Ten, 
 
 matchesTile :: Card -> Row -> Column -> Bool
 matchesTile card row column =
-  case (suit, rank) of
-    (Just s, Just r) -> (Card s r) == card
-    (_     , _     ) -> False
-  where suit = (suits !! row) !! column
-        rank = (ranks !! row) !! column
+    case (suit, rank) of
+        (Just s, Just r) -> (Card s r) == card
+        (_     , _     ) -> False
+    where suit = (suits !! row) !! column
+          rank = (ranks !! row) !! column
