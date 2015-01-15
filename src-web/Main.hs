@@ -5,7 +5,6 @@
 module Sequence.Api where
 
 import Control.Concurrent
-import Control.Concurrent.MVar
 import Control.Monad.Trans (liftIO)
 import Data.Aeson hiding (json)
 import Data.List
@@ -28,8 +27,19 @@ type LobbyList = MVar [Lobby]
 type GameList = MVar [Game]
 type ActionResult = ActionT ErrorResult IO ()
 
-data ErrorResult = BadRequest String | Unauthorized | NotFound | InternalServerError String
-                  deriving (Show, Eq)
+instance Parsable UUID where
+    parseParam t = maybeToEither "Could not parse UUID." $ fromString $ TL.unpack t
+        where maybeToEither _ (Just x) = Right x
+              maybeToEither e (Nothing) = Left e
+
+data CreateGameRequest = CreateGameRequest { numTeams :: Int, numPlayersPerTeam :: Int } deriving (Generic)
+instance FromJSON CreateGameRequest
+
+data ErrorResult = BadRequest String
+                 | Unauthorized
+                 | NotFound
+                 | InternalServerError String
+                 deriving (Show, Eq)
 
 instance ScottyError ErrorResult where
     stringError = InternalServerError
@@ -152,11 +162,3 @@ getGame gameList = do
     case (find (\g -> (gameId g) == gId) games) of
         Nothing -> raise NotFound
         Just game -> json game
-
-instance Parsable UUID where
-    parseParam t = maybeToEither "Could not parse UUID." $ fromString $ TL.unpack t
-        where maybeToEither _ (Just x) = Right x
-              maybeToEither e (Nothing) = Left e
-
-data CreateGameRequest = CreateGameRequest { numTeams :: Int, numPlayersPerTeam :: Int } deriving (Generic)
-instance FromJSON CreateGameRequest

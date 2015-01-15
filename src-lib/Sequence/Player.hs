@@ -25,7 +25,8 @@ instance Show Player where
     show (Human humanId) = show humanId
     show (Bot value) = show value
 
-data PlayerState = PlayerState { player :: Player
-                               , hand :: [Card]
-                               , team :: Team }
-                               deriving (Show)
+data PlayerState = PlayerState 
+    { player :: Player
+    , hand :: [Card]
+    , team :: Team }
+    deriving (Show)

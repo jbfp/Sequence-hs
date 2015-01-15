@@ -32,18 +32,18 @@ data Game = GameT
     , board :: Board }
 
 mkGame :: UUID -> [Player] -> Seed -> Game
-mkGame uuid players (Seed seed) = GameT
+mkGame uuid ps (Seed seed) = GameT
     { gameId = uuid
-    , deck = deck
+    , deck = rest
     , players = mappedPlayers
     , board = mkBoard }
     where rng = mkStdGen seed
           shuffledDeck = makeShuffledDeck rng
-          numPlayers = length players
+          numPlayers = length ps
           numCardsPerPlayer = getNumCards numPlayers
           nppt = numPlayersToTeamSize numPlayers
-          (hands, deck) = runState (dealHands numPlayers numCardsPerPlayer) shuffledDeck
-          mappedPlayers = mapi (\i p -> PlayerState { player = p, team = toEnum $ (i `mod` nppt), hand = (hands !! i) }) players           
+          (hands, rest) = runState (dealHands numPlayers numCardsPerPlayer) shuffledDeck
+          mappedPlayers = mapi (\i p -> PlayerState { player = p, team = toEnum $ (i `mod` nppt), hand = (hands !! i) }) ps           
 
 numPlayersToTeamSize :: Int -> Int
 numPlayersToTeamSize n = case n of
@@ -61,13 +61,13 @@ hasCard :: Card -> [Card] -> Bool
 hasCard card cards = card `elem` cards
 
 tileIsEmpty :: Board -> Int -> Int -> Bool
-tileIsEmpty board row column = fst (getTile board row column) == Nothing
+tileIsEmpty b row column = fst (getTile b row column) == Nothing
 
 isNotPartOfSequence :: Board -> Int -> Int -> Bool
-isNotPartOfSequence board row column = any ((==) coordinate) coordinates
+isNotPartOfSequence b row column = any ((==) coordinate) coordinates
     -- Get ALL sequences from all possible sequences, then concat, then get throw away the team whose sequence it is,
     -- then concat those sequences. Flatten the sequences so we only get a list of tiles, that are part of some sequence,
     -- and throw away the value of the tile because we don't care.
-    where sequences = concat $ fmap getAllSequences $ possibleSequences board        
+    where sequences = concat $ fmap getAllSequences $ possibleSequences b        
           coordinates = fmap (snd) $ concat $ concat $ fmap (snd) sequences
           coordinate = (row, column)
