@@ -28,6 +28,12 @@ import Web.Scotty
 type LobbyList = MVar [Lobby]
 type GameList = MVar [Game]
 
+main :: IO ()
+main = do
+    lobbies <- newMVar []
+    games <- newMVar []
+    scotty 3000 $ app lobbies games
+
 app :: LobbyList -> GameList -> ScottyM ()
 app lobbyList gameList = do
     middleware logStdoutDev
@@ -81,12 +87,6 @@ app lobbyList gameList = do
         gId <- param "gameId"
         seed <- liftIO $ newSeed
         json $ mkGame gId [] seed
-
-main :: IO ()
-main = do
-    lobbies <- newMVar []
-    games <- newMVar []
-    scotty 3000 $ app lobbies games
 
 instance Parsable UUID where
     parseParam t = maybeToEither "Could not parse UUID." $ fromString $ TL.unpack t
