@@ -18,3 +18,4 @@ cabal.config
 *.bat
 *.sublime-project
 *.sublime-workspace
+/.dist-buildwrapper/
