@@ -24,6 +24,7 @@ import Sequence.Lobby
 import Sequence.Player
 import Sequence.Seed
 import System.Environment
+import Web.JWT hiding (header)
 import Web.Scotty.Trans
 
 type LobbyList = MVar [Lobby]
@@ -43,21 +44,25 @@ main = do
     lobbies <- newMVar []
     games <- newMVar []
     users <- newMVar []
-    secret <- getEnv "SequenceSecret"
+    key <- fmap (secret . T.pack) (getEnv "SequenceSecret")
     
     scottyT 3000 id id $ do
         middleware logStdoutDev
         defaultHandler handleErrorResult
-        auth (T.pack secret) users >> app lobbies games
+        auth key users        
+        app key lobbies games users
 
-app :: LobbyList -> GameList -> ScottyT ErrorResult IO ()
-app lobbyList gameList = do
+app :: Secret -> LobbyList -> GameList -> UserList -> ScottyT ErrorResult IO ()
+app key lobbyList gameList users = do
+    -- Match all routes, routes that allows anyone should be above this line.
+    matchAny (function (\_ -> Just [])) $ authorize key users 
+    
     get "/lobbies" $ getLobbies lobbyList
     post "/lobbies/:lobbyId" $ createLobby lobbyList
     post "/lobbies/:lobbyId/players" $ postJoinLobby lobbyList gameList
     
     get "/games" $ getGames gameList
-    get "/games/:gameId" $ getGame gameList
+    get "/games/:gameId" $ getGame gameList    
 
 getLobbies :: LobbyList -> ActionResult
 getLobbies lobbyList = do
@@ -145,5 +150,5 @@ getUserId = do
     authorization <- header "Authorization"
     let val = fromString $ TL.unpack $ fromMaybe "" authorization
     case val of
-        Nothing -> raise Unauthorized
+        Nothing -> raise NotFound
         Just pId -> return pId 
