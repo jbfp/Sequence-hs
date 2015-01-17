@@ -47,6 +47,7 @@ executable Sequence.Api
                     , persistent
                     , persistent-sqlite
                     , persistent-template
+                    , pwstore-fast
                     , random
                     , scotty
                     , Sequence

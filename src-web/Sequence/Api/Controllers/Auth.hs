@@ -5,9 +5,12 @@ module Sequence.Api.Controllers.Auth where
 
 import Control.Concurrent
 import Control.Monad.Trans (liftIO)
+import Crypto.PasswordStore
 import Data.Aeson hiding (json)
+import qualified Data.ByteString as BS
 import Data.List
 import Data.Text hiding (find)
+import qualified Data.Text.Encoding as TE
 import Data.Time.Clock.POSIX
 import Data.UUID (UUID)
 import Data.UUID.V4 (nextRandom)
@@ -22,22 +25,22 @@ type UserList = MVar [User]
 
 data User = User
     { unUserId :: UUID
-    , unUserName :: String
-    , unEmailAddress :: String
-    , unPassword :: String } -- TODO: Use hashing + salt!
+    , unUserName :: Text
+    , unEmailAddress :: Text
+    , unPassword :: BS.ByteString }
 
 data RegisterUserRequest = RegisterUserRequest
-    { desiredUserName :: String
-    , emailAddress :: String
-    , password :: String
-    , confirmPassword :: String
+    { desiredUserName :: Text
+    , emailAddress :: Text
+    , password :: Text
+    , confirmPassword :: Text
     } deriving (Generic)
     
 instance FromJSON RegisterUserRequest
 
 data TokenRequest = TokenRequest
-    { userName :: String
-    , pwd :: String
+    { userName :: Text
+    , pwd :: Text
     } deriving (Generic)
 
 instance FromJSON TokenRequest
@@ -64,11 +67,13 @@ register users = do
         if password requestBodyJson /= confirmPassword requestBodyJson
         then raise $ BadRequest "The passwords don't match."
         else return requestBodyJson
-    userId <- liftIO nextRandom 
+    userId <- liftIO nextRandom
+    let strength = 12
+    hashedSaltedPassword <- liftIO $ makePassword ((TE.encodeUtf8 . password) registerUserRequest) strength 
     let user = User { unUserId = userId
                     , unUserName = desiredUserName registerUserRequest
                     , unEmailAddress = emailAddress registerUserRequest
-                    , unPassword = password registerUserRequest }
+                    , unPassword = hashedSaltedPassword }
     liftIO $ modifyMVar_ users (\us -> return $ user : us)
     status status201
     
@@ -84,8 +89,7 @@ getToken secretKey users = do
             Just u -> return u
             
     -- Confirm password is correct.
-    -- TODO: Compare hashes, not plain-text.    
-    if unPassword user /= pwd tokenRequest
+    if verifyPassword (unPassword user) ((TE.encodeUtf8 . pwd) tokenRequest)
     then raise Unauthorized
     else do 
         let key = secret secretKey
@@ -96,7 +100,7 @@ getToken secretKey users = do
             iss = stringOrURI "Foo",
             iat = intDate issuedAt,
             exp = intDate expires,
-            sub = (stringOrURI . pack . unUserName) user }
+            sub = (stringOrURI . unUserName) user }
         let token = encodeSigned HS256 key cs
         let jwt = JWTResponse { accessToken = token, expiresIn = round (expires - issuedAt) }
         json jwt
