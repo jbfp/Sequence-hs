@@ -16,6 +16,14 @@ cabal.config
 *.aux
 *.hp
 *.bat
+
+# Sublime
 *.sublime-project
 *.sublime-workspace
-/.dist-buildwrapper/
+
+
+# EclipseFP
+.dist-buildwrapper/
+
+.project
+.settings/
