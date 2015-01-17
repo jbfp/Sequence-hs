@@ -15,6 +15,8 @@ import Data.UUID (fromString, UUID)
 import GHC.Generics
 import Network.HTTP.Types
 import Network.Wai.Middleware.RequestLogger
+import Sequence.Api.Controllers.Auth
+import Sequence.Api.Error
 import Sequence.Api.Json ()
 import Sequence.Capacity (mkCapacity)
 import Sequence.Game hiding (players)
@@ -35,33 +37,19 @@ instance Parsable UUID where
 data CreateGameRequest = CreateGameRequest { numTeams :: Int, numPlayersPerTeam :: Int } deriving (Generic)
 instance FromJSON CreateGameRequest
 
-data ErrorResult = BadRequest String
-                 | Unauthorized
-                 | NotFound
-                 | InternalServerError String
-                 deriving (Show, Eq)
-
-instance ScottyError ErrorResult where
-    stringError = InternalServerError
-    showError = TL.pack . show
-
-handleErrorResult :: Monad m => ErrorResult -> ActionT ErrorResult m ()
-handleErrorResult (BadRequest err) = do status status400; json err
-handleErrorResult Unauthorized = status status401
-handleErrorResult NotFound = status status404
-handleErrorResult (InternalServerError err) = do status status500; json err
-
 main :: IO ()
 main = do
     lobbies <- newMVar []
     games <- newMVar []
-    scottyT 3000 id id $ app lobbies games
+    users <- newMVar []
+    
+    scottyT 3000 id id $ do
+        middleware logStdoutDev
+        defaultHandler handleErrorResult
+        auth users >> app lobbies games
 
 app :: LobbyList -> GameList -> ScottyT ErrorResult IO ()
 app lobbyList gameList = do
-    middleware logStdoutDev
-    defaultHandler handleErrorResult
-
     get "/lobbies" $ getLobbies lobbyList
     post "/lobbies/:lobbyId" $ createLobby lobbyList
     post "/lobbies/:lobbyId/players" $ postJoinLobby lobbyList gameList
