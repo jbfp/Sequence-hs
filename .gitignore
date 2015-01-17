@@ -27,3 +27,4 @@ cabal.config
 
 .project
 .settings/
+.stylish-haskell.yaml
