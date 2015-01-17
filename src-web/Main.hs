@@ -23,6 +23,7 @@ import Sequence.Game hiding (players)
 import Sequence.Lobby
 import Sequence.Player
 import Sequence.Seed
+import System.Environment
 import Web.Scotty.Trans
 
 type LobbyList = MVar [Lobby]
@@ -42,11 +43,12 @@ main = do
     lobbies <- newMVar []
     games <- newMVar []
     users <- newMVar []
+    secret <- getEnv "SequenceSecret"
     
     scottyT 3000 id id $ do
         middleware logStdoutDev
         defaultHandler handleErrorResult
-        auth users >> app lobbies games
+        auth (T.pack secret) users >> app lobbies games
 
 app :: LobbyList -> GameList -> ScottyT ErrorResult IO ()
 app lobbyList gameList = do
