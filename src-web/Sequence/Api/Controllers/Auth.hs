@@ -52,10 +52,10 @@ instance ToJSON JWTResponse where
                , "token_type"   .= pack "bearer"
                , "expires_in"   .= (show . expiresIn) jwt ]
 
-auth :: UserList -> ScottyT ErrorResult IO ()
-auth users = do
+auth :: Text -> UserList -> ScottyT ErrorResult IO ()
+auth secret users = do
     post "/register" $ register users
-    post "/token" $ getToken users        
+    post "/token" $ getToken secret users        
 
 register :: UserList -> ActionT ErrorResult IO ()
 register users = do
@@ -72,8 +72,8 @@ register users = do
     liftIO $ modifyMVar_ users (\us -> return $ user : us)
     status status201
     
-getToken :: UserList -> ActionT ErrorResult IO ()
-getToken users = do
+getToken :: Text -> UserList -> ActionT ErrorResult IO ()
+getToken secretKey users = do
     -- Verify user exists.
     tokenRequest <- jsonData
     let name = userName tokenRequest
@@ -88,6 +88,7 @@ getToken users = do
     if unPassword user /= pwd tokenRequest
     then raise Unauthorized
     else do 
+        let key = secret secretKey
         now <- liftIO getPOSIXTime
         let issuedAt = now
         let expires = issuedAt + 2629743 -- Expires in 1 month (30.44 days) 
@@ -96,6 +97,6 @@ getToken users = do
             iat = intDate issuedAt,
             exp = intDate expires,
             sub = (stringOrURI . pack . unUserName) user }
-        let token = encodeUnsigned cs
+        let token = encodeSigned HS256 key cs
         let jwt = JWTResponse { accessToken = token, expiresIn = round (expires - issuedAt) }
         json jwt
