@@ -71,7 +71,7 @@ app lobbyList gameList = do
 
 getLobbies :: LobbyList -> ActionResult
 getLobbies lobbyList = do
-    lobbies <- liftIO $ withMVar lobbyList (return)
+    lobbies <- liftIO $ withMVar lobbyList return
     json lobbies
 
 createLobby :: LobbyList -> ActionResult
@@ -80,21 +80,15 @@ createLobby lobbyList = do
     lId <- param "lobbyId"
 
     -- Get user ID from authorization header.    
-    playerId <- do
-        authorization <- header "Authorization"
-        val <- return $ fromString $ TL.unpack $ fromMaybe "" $ authorization
-        case val of
-            Nothing -> raise Unauthorized
-            Just pId -> return pId
-
+    playerId <- getUserId
     let human = Human playerId
 
     -- Validate capacity from request body.
     requestBodyJson <- jsonData
     let nt = numTeams requestBodyJson
     let nppt = numPlayersPerTeam requestBodyJson
-    validatedCapacity <- do
-        case (mkCapacity nt nppt) of
+    validatedCapacity <-
+        case mkCapacity nt nppt of
             Left err -> raise $ BadRequest $ show err
             Right c -> return c
 
@@ -110,13 +104,7 @@ createLobby lobbyList = do
 postJoinLobby :: LobbyList -> GameList -> ActionResult
 postJoinLobby lobbyList gameList = do
     -- Get user ID from authorization header.    
-    playerId <- do
-        authorization <- header "Authorization"
-        val <- return $ fromString $ TL.unpack $ fromMaybe "" $ authorization
-        case val of
-            Nothing -> raise Unauthorized
-            Just pId -> return pId
-
+    playerId <- getUserId
     let human = Human playerId
     
     -- Get lobby ID from URL param.
@@ -124,26 +112,25 @@ postJoinLobby lobbyList gameList = do
 
     -- Get the lobby by ID.
     lobby <- liftIO $ modifyMVar lobbyList (\lobbies -> do
-        let maybeIndex = findIndex (\lobby -> (lobbyId lobby) == lId) lobbies
+        let maybeIndex = findIndex (\lobby -> lobbyId lobby == lId) lobbies
         case maybeIndex of
             Nothing -> return (lobbies, Left NotFound)
             Just idx -> do
-                let (left, (lobby:right)) = splitAt idx lobbies
+                let (left, lobby : right) = splitAt idx lobbies
 
                 case human `joinLobby` lobby of
                     Left err -> return (lobbies, Left $ InternalServerError $ show err)
-                    Right lobby' -> do
-                        if isFull lobby' then
-                            return (left ++ right, Right lobby')
-                        else
-                            return (lobby' : (left ++ right), Right lobby'))
+                    Right lobby' ->
+                        return (if isFull lobby'
+                                then (left ++ right, Right lobby') 
+                                else (lobby' : (left ++ right), Right lobby')))
 
     case lobby of
         Left err -> raise err
-        Right l -> do 
+        Right l ->
             -- Start game if full.
             if isFull l then do
-                seed <- liftIO $ newSeed
+                seed <- liftIO newSeed
                 let game = mkGame lId (players l) seed
                 liftIO $ modifyMVar_ gameList (\games -> return $ game : games)
                 json game
@@ -151,14 +138,22 @@ postJoinLobby lobbyList gameList = do
 
 getGames :: GameList -> ActionResult
 getGames gameList = do
-    games <- liftIO $ withMVar gameList (return)
+    games <- liftIO $ withMVar gameList return
     json games
 
 getGame :: GameList -> ActionResult
 getGame gameList = do
     gId <- param "gameId"
-    games <- liftIO $ withMVar gameList (return)
+    games <- liftIO $ withMVar gameList return
     
-    case (find (\g -> (gameId g) == gId) games) of
+    case find (\g -> gameId g == gId) games of
         Nothing -> raise NotFound
         Just game -> json game
+        
+getUserId :: ActionT ErrorResult IO UUID
+getUserId = do
+    authorization <- header "Authorization"
+    let val = fromString $ TL.unpack $ fromMaybe "" authorization
+    case val of
+        Nothing -> raise Unauthorized
+        Just pId -> return pId 

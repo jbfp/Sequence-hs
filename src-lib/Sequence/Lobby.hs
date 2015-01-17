@@ -16,7 +16,7 @@ data Lobby = Lobby
     deriving (Show)
 
 instance Eq Lobby where
-    l == r = (lobbyId l) == (lobbyId r)
+    l == r = lobbyId l == lobbyId r
 
 data LobbyError = PlayerAlreadyExists
                 | LobbyIsFull
@@ -24,7 +24,7 @@ data LobbyError = PlayerAlreadyExists
                 deriving (Show)
 
 isFull :: Lobby -> Bool
-isFull (Lobby _ cap ps) = (length ps) == (numPlayers cap)
+isFull (Lobby _ cap ps) = length ps == numPlayers cap
 
 confirm :: (a -> Bool) -> a -> e -> Either e ()
 confirm f x e
@@ -33,10 +33,10 @@ confirm f x e
 
 joinLobby :: Player -> Lobby -> Either LobbyError Lobby
 joinLobby player lobby@(Lobby _ cap ps) = do    
-    let mp = (numTeams cap) * (numPlayersPerTeam cap)
+    let mp = numTeams cap * numPlayersPerTeam cap
     confirm (notFull mp) ps LobbyIsFull
     confirm (playerDoesNotExist player) ps PlayerAlreadyExists
-    return lobby { players = player : (players lobby) }
+    return lobby { players = player : players lobby }
 
 playerDoesNotExist :: Eq a => a -> [a] -> Bool
 playerDoesNotExist = notElem

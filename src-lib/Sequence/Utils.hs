@@ -30,7 +30,7 @@ pop []     = (Nothing, [])
 pop (x:xs) = (Just x, xs)
 
 replace :: Int -> a -> [a] -> [a]
-replace i x xs = (take i xs) ++ [x] ++ (drop (i + 1) xs)
+replace i x xs = take i xs ++ [x] ++ drop (i + 1) xs
 
 replace' :: Int -> Int -> a -> [[a]] -> [[a]]
 replace' row column element matrix = replace row (replace column element (matrix !! column)) matrix

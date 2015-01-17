@@ -53,7 +53,7 @@ type Deck = [Card]
 type Hand = [Card]
 
 makeDeck :: Deck
-makeDeck = fmap (\(x, y) -> Card x y) cards :: Deck
+makeDeck = fmap (uncurry Card) cards :: Deck
     where suits = [Spades .. Diamonds]
           ranks = [Ace .. King]
           cards = double $ cartesian suits ranks
@@ -63,7 +63,7 @@ shuffleDeck g deck = shuffle' deck (length deck) g
 
 -- | Shuffles a deck of 104 cards.
 makeShuffledDeck :: RandomGen g => g -> Deck
-makeShuffledDeck g = shuffleDeck g $ makeDeck
+makeShuffledDeck g = shuffleDeck g makeDeck
 
 getNumCards :: Int -> Int
 getNumCards n = case n of

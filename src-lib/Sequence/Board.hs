@@ -13,6 +13,7 @@ module Sequence.Board
 , matchesTile
 ) where
 
+import Control.Applicative ((<$>))
 import Data.List (nub, transpose)
 import Data.Maybe (catMaybes, isJust)
 import Sequence.Cards ( Suit (..), Rank (..), Card (Card))
@@ -39,12 +40,12 @@ isWinner board team =
     any (\l -> length (getSequencesForTeam team l) == 2) $ possibleSequences board
 
 getTile :: Board -> Int -> Int -> Tile
-getTile board row column = ((board !! row) !! column)
+getTile board row column = (board !! row) !! column
 
 getSequence' :: Sequence -> [Tile] -> Maybe Team -> [Sequence]
 getSequence' _ [] _     = []
 getSequence' (acc@(x:_)) (list@(y@(ty, _):ys)) team
-    | (length acc) == 5 =
+    | length acc == 5 =
         let rest = x : list -- We append the head of the sequence, since one tile can be shared.
             sequences = getSequence' [] rest team
         in  acc : sequences
@@ -56,7 +57,7 @@ getSequencesForTeam team tiles = getSequence' [] tiles (Just team)
 
 getAllSequences :: [Tile] -> [(Team, [Sequence])]
 getAllSequences tiles = fmap (\t -> (t, getSequencesForTeam t tiles)) teams
-    where teams = nub $ catMaybes $ fmap (fst) $ filter (\(team, _) -> isJust team) tiles -- nub removes duplicates, catMaybes throws out Nothings.
+    where teams = nub $ catMaybes (fst <$> filter (\ (team, _) -> isJust team) tiles) -- nub removes duplicates, catMaybes throws out Nothings.
 
 suits :: Matrix (Maybe Suit)
 suits = [[Nothing,       Just Diamonds, Just Diamonds, Just Diamonds, Just Diamonds, Just Diamonds, Just Diamonds, Just Diamonds, Just Diamonds, Nothing],
@@ -85,7 +86,7 @@ ranks = [[Nothing,    Just Six,   Just Seven, Just Eight, Just Nine,  Just Ten, 
 matchesTile :: Card -> Row -> Column -> Bool
 matchesTile card row column =
     case (suit, rank) of
-        (Just s, Just r) -> (Card s r) == card
+        (Just s, Just r) -> Card s r == card
         (_     , _     ) -> False
     where suit = (suits !! row) !! column
           rank = (ranks !! row) !! column

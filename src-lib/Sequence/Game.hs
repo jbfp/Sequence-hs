@@ -7,7 +7,9 @@ module Sequence.Game
 , mkGame
 ) where
 
+import Control.Applicative ((<$>))
 import Control.Monad.State (runState)
+import Data.Maybe (isNothing)
 import Data.UUID (UUID)
 import Sequence.Board (Board, getAllSequences, getTile, mkBoard, possibleSequences)
 import Sequence.Cards (Card (..), dealHands, Deck, getNumCards, makeShuffledDeck)
@@ -43,7 +45,7 @@ mkGame uuid ps (Seed seed) = GameT
           numCardsPerPlayer = getNumCards numPlayers
           nppt = numPlayersToTeamSize numPlayers
           (hands, rest) = runState (dealHands numPlayers numCardsPerPlayer) shuffledDeck
-          mappedPlayers = mapi (\i p -> PlayerState { player = p, team = toEnum $ (i `mod` nppt), hand = (hands !! i) }) ps           
+          mappedPlayers = mapi (\i p -> PlayerState { player = p, team = toEnum (i `mod` nppt), hand = hands !! i }) ps           
 
 numPlayersToTeamSize :: Int -> Int
 numPlayersToTeamSize n = case n of
@@ -55,19 +57,19 @@ numPlayersToTeamSize n = case n of
 
 isPlayersTurn :: [PlayerState] -> Player -> Bool
 isPlayersTurn [] _ = False
-isPlayersTurn (x:_) p = (player x) == p
+isPlayersTurn (x:_) p = player x == p
 
 hasCard :: Card -> [Card] -> Bool
 hasCard card cards = card `elem` cards
 
 tileIsEmpty :: Board -> Int -> Int -> Bool
-tileIsEmpty b row column = fst (getTile b row column) == Nothing
+tileIsEmpty b row column = isNothing (fst (getTile b row column))
 
 isNotPartOfSequence :: Board -> Int -> Int -> Bool
-isNotPartOfSequence b row column = any ((==) coordinate) coordinates
+isNotPartOfSequence b row column = coordinate `elem` coordinates
     -- Get ALL sequences from all possible sequences, then concat, then get throw away the team whose sequence it is,
     -- then concat those sequences. Flatten the sequences so we only get a list of tiles, that are part of some sequence,
     -- and throw away the value of the tile because we don't care.
-    where sequences = concat $ fmap getAllSequences $ possibleSequences b        
-          coordinates = fmap (snd) $ concat $ concat $ fmap (snd) sequences
+    where sequences = concat (getAllSequences <$> possibleSequences b)
+          coordinates = fmap snd $ concat $ concat $ fmap snd sequences
           coordinate = (row, column)
