@@ -4,12 +4,14 @@
 module Sequence.Api.Controllers.Auth where
 
 import Control.Concurrent
+import Control.Monad (when)
 import Control.Monad.Trans (liftIO)
 import Crypto.PasswordStore
 import Data.Aeson hiding (json)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.List
+import Data.Maybe (isNothing)
 import Data.Monoid
 import Data.Text hiding (find)
 import qualified Data.Text.Encoding as TE
@@ -111,28 +113,48 @@ getToken key users = do
         json jwt
         
 authorize :: Secret -> UserList -> ActionT ErrorResult IO User
-authorize key users = do    
-    authorizationHeader <- header "Authorization"    
-    case authorizationHeader of
-        Nothing -> raise $ UnauthorizedMessage "Authorization header is required."
-        Just tl -> do
-            let bs = (BS.concat . BSL.toChunks . TLE.encodeUtf8) tl
-            let (x, y) = BS.break W8.isSpace bs
-            if BS.map W8.toLower x /= "bearer"
-            then raise $ UnauthorizedMessage "Authorization schema must be Bearer."
-            else do
-                let txt = strip $ TE.decodeUtf8 y                
-                case decodeAndVerifySignature key txt of
-                    Nothing -> raise $ UnauthorizedMessage "Invalid JWT."
-                    Just jwt -> do
-                        let cs = claims jwt
-                        -- TODO: Verify iat and exp
-                        let subject = sub cs
-                        case subject of
-                             Nothing -> raise $ UnauthorizedMessage "Missing subject claim."
-                             Just s -> do
-                                let name = (pack . show) s
-                                maybeUser <- liftIO $ withMVar users (return . find (\usr -> name == unUserName usr))
-                                case maybeUser of
-                                    Nothing -> raise Unauthorized
-                                    Just u -> return u
+authorize key users = do
+    -- Verify authorization header exists.
+    tl <- do    
+        authorizationHeader <- header "Authorization" 
+        case authorizationHeader of
+            Nothing -> raise $ UnauthorizedMessage "Authorization header is required."
+            Just tl -> return tl
+    
+    -- Verify authorization scheme is bearer, while also fighting
+    -- with Haskell string types.
+    let bs = (BS.concat . BSL.toChunks . TLE.encodeUtf8) tl
+    let (x, y) = BS.break W8.isSpace bs
+    if BS.map W8.toLower x /= "bearer"
+    then raise $ UnauthorizedMessage "Authorization schema must be Bearer."
+    else do
+        -- Verify JWT signature.
+        let txt = strip $ TE.decodeUtf8 y
+        verifiedJwt <- case decodeAndVerifySignature key txt of
+            Nothing -> raise $ UnauthorizedMessage "Invalid JWT."
+            Just jwt -> return jwt
+                
+        let cs = claims verifiedJwt
+        now <- liftIO getPOSIXTime
+        
+        -- Verify "iat" (issued at) claim. If iat is later than now, it should be rejected.        
+        issuedAt <- case iat cs of
+            Nothing -> raise $ UnauthorizedMessage "Missing iat from JWT."
+            Just i -> return $ secondsSinceEpoch i        
+        when (issuedAt > now) (raise Unauthorized)
+        
+        -- Verify "exp" (expiration time) claim. If exp is earlier than now, 
+        -- it has expired and should be rejected.
+        expiration <- case exp cs of
+            Nothing -> raise $ UnauthorizedMessage "Missing exp from JWT."
+            Just e -> return $ secondsSinceEpoch e
+        when (expiration < now) (raise $ UnauthorizedMessage "JWT has expired.")        
+        
+        -- Verify user exists.
+        subject <- case sub cs of        
+             Nothing -> raise $ UnauthorizedMessage "Missing sub from JWT."
+             Just s -> (return . pack . show) s        
+        maybeUser <- liftIO $ withMVar users (return . find (\usr -> subject == unUserName usr))
+        case maybeUser of
+            Nothing -> raise Unauthorized
+            Just u -> return u
