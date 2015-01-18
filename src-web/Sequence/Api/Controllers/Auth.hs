@@ -27,6 +27,7 @@ import Web.JWT hiding (header)
 import Web.Scotty.Trans
 
 type UserList = MVar [User]
+type Authorizer = ActionT ErrorResult IO User
 
 data User = User
     { unUserId :: UUID
@@ -109,32 +110,29 @@ getToken key users = do
         let jwt = JWTResponse { accessToken = token, expiresIn = round (expires - issuedAt) }
         json jwt
         
-authorize :: Secret -> UserList -> ActionT ErrorResult IO ()
+authorize :: Secret -> UserList -> ActionT ErrorResult IO User
 authorize key users = do    
     authorizationHeader <- header "Authorization"    
     case authorizationHeader of
-        Nothing -> unauthorized "Authorization header is required."
+        Nothing -> raise $ UnauthorizedMessage "Authorization header is required."
         Just tl -> do
             let bs = (BS.concat . BSL.toChunks . TLE.encodeUtf8) tl
             let (x, y) = BS.break W8.isSpace bs
             if BS.map W8.toLower x /= "bearer"
-            then unauthorized "Authorization schema must be Bearer."
+            then raise $ UnauthorizedMessage "Authorization schema must be Bearer."
             else do
                 let txt = strip $ TE.decodeUtf8 y                
                 case decodeAndVerifySignature key txt of
-                    Nothing -> unauthorized "Invalid JWT."
+                    Nothing -> raise $ UnauthorizedMessage "Invalid JWT."
                     Just jwt -> do
                         let cs = claims jwt
                         -- TODO: Verify iat and exp
                         let subject = sub cs
                         case subject of
-                             Nothing -> unauthorized "Missing subject claim."
+                             Nothing -> raise $ UnauthorizedMessage "Missing subject claim."
                              Just s -> do
                                 let name = (pack . show) s
                                 maybeUser <- liftIO $ withMVar users (return . find (\usr -> name == unUserName usr))
                                 case maybeUser of
                                     Nothing -> raise Unauthorized
-                                    Just u -> next                                
-
-unauthorized :: TL.Text -> ActionT ErrorResult IO ()
-unauthorized msg = do status status401; text msg
+                                    Just u -> return u
