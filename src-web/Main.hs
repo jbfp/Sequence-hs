@@ -24,6 +24,7 @@ import Sequence.Lobby
 import Sequence.Player
 import Sequence.Seed
 import System.Environment
+import Web.JWT hiding (header)
 import Web.Scotty.Trans
 
 type LobbyList = MVar [Lobby]
@@ -43,34 +44,39 @@ main = do
     lobbies <- newMVar []
     games <- newMVar []
     users <- newMVar []
-    secret <- getEnv "SequenceSecret"
+    key <- fmap (secret . T.pack) (getEnv "SequenceSecret")
     
     scottyT 3000 id id $ do
         middleware logStdoutDev
         defaultHandler handleErrorResult
-        auth (T.pack secret) users >> app lobbies games
+        auth key users        
+        app key lobbies games users
 
-app :: LobbyList -> GameList -> ScottyT ErrorResult IO ()
-app lobbyList gameList = do
-    get "/lobbies" $ getLobbies lobbyList
-    post "/lobbies/:lobbyId" $ createLobby lobbyList
-    post "/lobbies/:lobbyId/players" $ postJoinLobby lobbyList gameList
+app :: Secret -> LobbyList -> GameList -> UserList -> ScottyT ErrorResult IO ()
+app key lobbyList gameList users = do
+    let authorizer = authorize key users
     
-    get "/games" $ getGames gameList
-    get "/games/:gameId" $ getGame gameList
+    get "/lobbies" $ getLobbies lobbyList authorizer
+    post "/lobbies/:lobbyId" $ createLobby lobbyList authorizer
+    post "/lobbies/:lobbyId/players" $ postJoinLobby lobbyList gameList authorizer
+    
+    get "/games" $ getGames gameList authorizer
+    get "/games/:gameId" $ getGame gameList authorizer
 
-getLobbies :: LobbyList -> ActionResult
-getLobbies lobbyList = do
+getLobbies :: LobbyList -> Authorizer -> ActionResult
+getLobbies lobbyList authorizer = do
+    _ <- authorizer    
     lobbies <- liftIO $ withMVar lobbyList return
     json lobbies
 
-createLobby :: LobbyList -> ActionResult
-createLobby lobbyList = do
+createLobby :: LobbyList -> Authorizer -> ActionResult
+createLobby lobbyList authorizer = do
     -- Get lobby ID from URL param.
     lId <- param "lobbyId"
 
-    -- Get user ID from authorization header.    
-    playerId <- getUserId
+    -- Get user ID from authorization header.
+    usr <- authorizer
+    let playerId = unUserId usr
     let human = Human playerId
 
     -- Validate capacity from request body.
@@ -91,10 +97,11 @@ createLobby lobbyList = do
             status status201
             json lobby'
 
-postJoinLobby :: LobbyList -> GameList -> ActionResult
-postJoinLobby lobbyList gameList = do
+postJoinLobby :: LobbyList -> GameList -> Authorizer -> ActionResult
+postJoinLobby lobbyList gameList authorizer = do
     -- Get user ID from authorization header.    
-    playerId <- getUserId
+    usr <- authorizer
+    let playerId = unUserId usr
     let human = Human playerId
     
     -- Get lobby ID from URL param.
@@ -126,24 +133,18 @@ postJoinLobby lobbyList gameList = do
                 json game
             else json l
 
-getGames :: GameList -> ActionResult
-getGames gameList = do
+getGames :: GameList -> Authorizer -> ActionResult
+getGames gameList authorizer = do
+    _ <- authorizer
     games <- liftIO $ withMVar gameList return
     json games
 
-getGame :: GameList -> ActionResult
-getGame gameList = do
+getGame :: GameList -> Authorizer -> ActionResult
+getGame gameList authorizer = do
+    _ <- authorizer
     gId <- param "gameId"
     games <- liftIO $ withMVar gameList return
     
     case find (\g -> gameId g == gId) games of
         Nothing -> raise NotFound
         Just game -> json game
-        
-getUserId :: ActionT ErrorResult IO UUID
-getUserId = do
-    authorization <- header "Authorization"
-    let val = fromString $ TL.unpack $ fromMaybe "" authorization
-    case val of
-        Nothing -> raise Unauthorized
-        Just pId -> return pId 
