@@ -75,9 +75,7 @@ createLobby lobbyList authorizer = do
     lId <- param "lobbyId"
 
     -- Get user ID from authorization header.
-    usr <- authorizer
-    let playerId = unUserId usr
-    let human = Human playerId
+    player <- getPlayerFromAuth authorizer
 
     -- Validate capacity from request body.
     requestBodyJson <- jsonData
@@ -90,7 +88,7 @@ createLobby lobbyList authorizer = do
 
     let lobby = Lobby { lobbyId = lId, capacity = validatedCapacity, players = []}
 
-    case human `joinLobby` lobby of
+    case player `joinLobby` lobby of
         Left err' -> do status status500; json $ String $ T.pack $ show err'
         Right lobby' -> do
             liftIO $ modifyMVar_ lobbyList (\lobbies -> return $ lobby' : lobbies)
@@ -99,10 +97,8 @@ createLobby lobbyList authorizer = do
 
 postJoinLobby :: LobbyList -> GameList -> Authorizer -> ActionResult
 postJoinLobby lobbyList gameList authorizer = do
-    -- Get user ID from authorization header.    
-    usr <- authorizer
-    let playerId = unUserId usr
-    let human = Human playerId
+    -- Get user ID from authorization header.
+    player <- getPlayerFromAuth authorizer
     
     -- Get lobby ID from URL param.
     lId <- param "lobbyId"
@@ -115,7 +111,7 @@ postJoinLobby lobbyList gameList authorizer = do
             Just idx -> do
                 let (left, lobby : right) = splitAt idx lobbies
 
-                case human `joinLobby` lobby of
+                case player `joinLobby` lobby of
                     Left err -> return (lobbies, Left $ InternalServerError $ show err)
                     Right lobby' ->
                         return (if isFull lobby'
@@ -148,3 +144,10 @@ getGame gameList authorizer = do
     case find (\g -> gameId g == gId) games of
         Nothing -> raise NotFound
         Just game -> json game
+        
+getPlayerFromAuth :: Authorizer -> ActionT ErrorResult IO Player
+getPlayerFromAuth authorizer = do
+    usr <- authorizer
+    let playerId = unUserId usr
+    let human = Human playerId
+    return human
