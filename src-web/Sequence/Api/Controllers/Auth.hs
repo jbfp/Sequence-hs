@@ -60,11 +60,11 @@ instance ToJSON JWTResponse where
 
 auth :: Secret -> UserList -> ScottyT ErrorResult IO ()
 auth key users = do
-    post "/register" $ register users
+    post "/register" $ register key users
     post "/token" $ getToken key users        
 
-register :: UserList -> ActionT ErrorResult IO ()
-register users = do    
+register :: Secret -> UserList -> ActionT ErrorResult IO ()
+register key users = do    
     (RegisterUserRequest uname ea pass) <- jsonData
     
     maybeUser <- liftIO $ getUserByNameIO uname users
@@ -77,7 +77,7 @@ register users = do
         Right u -> return u                 
     liftIO $ modifyMVar_ users (\us -> return $ user : us)
     status status201
-    json user
+    liftIO (mkJWT key user) >>= json
 
 getToken :: Secret -> UserList -> ActionT ErrorResult IO ()
 getToken key users = do
@@ -88,19 +88,21 @@ getToken key users = do
             
     -- Confirm password is correct.
     if verifyPassword ((TE.encodeUtf8 . pwd) tokenRequest) (unPassword user)
-    then do         
-        now <- liftIO getPOSIXTime
-        let issuedAt = now
-        let expires = issuedAt + 2629743 -- Expires in 1 month (30.44 days) 
-        let cs = def {
-            iss = stringOrURI "Foo",
-            iat = intDate issuedAt,
-            exp = intDate expires,
-            sub = (stringOrURI . unUserName) user }
-        let token = encodeSigned HS256 key cs
-        let jwt = JWTResponse { accessToken = token, expiresIn = round (expires - issuedAt) }
-        json jwt
+    then liftIO (mkJWT key user) >>= json
     else raise $ UnauthorizedMessage "Password is incorrect."
+       
+mkJWT :: Secret -> User -> IO JWTResponse
+mkJWT key user = do
+    now <- liftIO getPOSIXTime
+    let issuedAt = now - 60 -- Avoid rounding errors, sometimes requests following the "getToken" request would be denied because they were too "early".
+    let expires = issuedAt + 2629743 -- Expires in 1 month (30.44 days) 
+    let cs = def {
+        iss = stringOrURI "Foo",
+        iat = intDate issuedAt,
+        exp = intDate expires,
+        sub = (stringOrURI . unUserName) user }
+    let token = encodeSigned HS256 key cs
+    return JWTResponse { accessToken = token, expiresIn = round (expires - issuedAt) }
         
 authorize :: Secret -> UserList -> ActionT ErrorResult IO User
 authorize key users = do
