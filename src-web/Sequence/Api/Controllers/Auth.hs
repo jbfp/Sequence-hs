@@ -90,9 +90,8 @@ getToken key users = do
             Just u -> return u
             
     -- Confirm password is correct.
-    if verifyPassword (unPassword user) ((TE.encodeUtf8 . pwd) tokenRequest)
-    then raise Unauthorized
-    else do         
+    if verifyPassword ((TE.encodeUtf8 . pwd) tokenRequest) (unPassword user)
+    then do         
         now <- liftIO getPOSIXTime
         let issuedAt = now
         let expires = issuedAt + 2629743 -- Expires in 1 month (30.44 days) 
@@ -104,6 +103,7 @@ getToken key users = do
         let token = encodeSigned HS256 key cs
         let jwt = JWTResponse { accessToken = token, expiresIn = round (expires - issuedAt) }
         json jwt
+    else raise $ UnauthorizedMessage "Password is incorrect."
         
 authorize :: Secret -> UserList -> ActionT ErrorResult IO User
 authorize key users = do
