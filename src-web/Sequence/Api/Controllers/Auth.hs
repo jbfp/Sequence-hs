@@ -12,7 +12,7 @@ import Data.Aeson hiding (json)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.List
-import Data.Maybe (isNothing)
+import Data.Maybe (isJust, isNothing)
 import Data.Monoid
 import Data.Text as DT hiding (find)
 import qualified Data.Text.Encoding as TE
@@ -64,30 +64,29 @@ auth key users = do
     post "/token" $ getToken key users        
 
 register :: UserList -> ActionT ErrorResult IO ()
-register users = do
-    -- TODO: Validate user does not exist.
-    rq <- jsonData
+register users = do    
+    (RegisterUserRequest uname ea pass) <- jsonData
+    
+    maybeUser <- liftIO $ getUserByNameIO uname users
+    when (isJust maybeUser) (raise $ BadRequest "User already exists.")
+    
     userId <- liftIO nextRandom
-    salt <- liftIO genSaltIO    
+    salt <- liftIO genSaltIO
     user <- do
-        let eitherUser = mkUser userId (desiredUserName rq) (emailAddress rq) salt (password rq)
+        let eitherUser = mkUser userId uname ea salt pass
         case eitherUser of
             Left err -> (raise . BadRequest . show) err 
             Right u -> return u                 
     liftIO $ modifyMVar_ users (\us -> return $ user : us)
     status status201
     json user
- 
+
 getToken :: Secret -> UserList -> ActionT ErrorResult IO ()
 getToken key users = do
     -- Verify user exists.
     tokenRequest <- jsonData
     let name = userName tokenRequest
-    user <- do
-        maybeUser <- liftIO $ withMVar users (return . find (\usr -> name == unUserName usr))
-        case maybeUser of
-            Nothing -> raise Unauthorized
-            Just u -> return u
+    user <- getUserByNameOrUnauthorized name users
             
     -- Confirm password is correct.
     if verifyPassword ((TE.encodeUtf8 . pwd) tokenRequest) (unPassword user)
@@ -147,7 +146,18 @@ authorize key users = do
         subject <- case sub cs of        
              Nothing -> raise $ UnauthorizedMessage "Missing sub from JWT."
              Just s -> (return . pack . show) s        
-        maybeUser <- liftIO $ withMVar users (return . find (\usr -> subject == unUserName usr))
-        case maybeUser of
-            Nothing -> raise Unauthorized
-            Just u -> return u
+        getUserByNameOrUnauthorized subject users
+        
+getUserByNameOrUnauthorized :: Text -> UserList -> ActionT ErrorResult IO User
+getUserByNameOrUnauthorized name users = do
+    maybeUser <- liftIO $ getUserByNameIO name users
+    case maybeUser of
+        Nothing -> raise Unauthorized
+        Just u -> return u
+
+getUserByNameIO :: Text -> UserList -> IO (Maybe User)
+getUserByNameIO name users =
+    liftIO $ withMVar users (return . getUserByName name)    
+
+getUserByName :: Text -> [User] -> Maybe User
+getUserByName name = find (\usr -> name == unUserName usr)
