@@ -72,11 +72,9 @@ register users = do
     
     userId <- liftIO nextRandom
     salt <- liftIO genSaltIO
-    user <- do
-        let eitherUser = mkUser userId uname ea salt pass
-        case eitherUser of
-            Left err -> (raise . BadRequest . show) err 
-            Right u -> return u                 
+    user <- case mkUser userId uname ea salt pass of
+        Left err -> (raise . BadRequest . show) err 
+        Right u -> return u                 
     liftIO $ modifyMVar_ users (\us -> return $ user : us)
     status status201
     json user
