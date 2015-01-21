@@ -13,7 +13,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.List
 import Data.Maybe (isNothing)
 import Data.Monoid
-import Data.Text hiding (find)
+import Data.Text as DT hiding (find)
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
@@ -41,7 +41,6 @@ data RegisterUserRequest = RegisterUserRequest
     { desiredUserName :: Text
     , emailAddress :: Text
     , password :: Text
-    , confirmPassword :: Text
     } deriving (Generic)
     
 instance FromJSON RegisterUserRequest
@@ -70,10 +69,13 @@ auth key users = do
 
 register :: UserList -> ActionT ErrorResult IO ()
 register users = do
+    -- TODO: Validate email address.
+    -- TODO: Validate user does not exist.
+    -- TODO: Validate password requirements.
     requestBodyJson <- jsonData
     registerUserRequest <-
-        if password requestBodyJson /= confirmPassword requestBodyJson
-        then raise $ BadRequest "The passwords don't match."
+        if (DT.null . desiredUserName) requestBodyJson
+        then raise $ BadRequest "User name is empty."
         else return requestBodyJson
     userId <- liftIO nextRandom
     let strength = 12
