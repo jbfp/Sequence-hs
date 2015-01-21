@@ -5,6 +5,7 @@
 module Sequence.Api where
 
 import Control.Concurrent
+import Control.Monad (liftM)
 import Control.Monad.Trans (liftIO)
 import Data.Aeson hiding (json)
 import Data.List
@@ -146,8 +147,4 @@ getGame gameList authorizer = do
         Just game -> json game
         
 getPlayerFromAuth :: Authorizer -> ActionT ErrorResult IO Player
-getPlayerFromAuth authorizer = do
-    usr <- authorizer
-    let playerId = unUserId usr
-    let human = Human playerId
-    return human
+getPlayerFromAuth = liftM (Human . unUserId)    
