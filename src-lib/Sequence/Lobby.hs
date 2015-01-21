@@ -21,7 +21,11 @@ instance Eq Lobby where
 data LobbyError = PlayerAlreadyExists
                 | LobbyIsFull
                 | LobbyIsNotFull
-                deriving (Show)
+
+instance Show LobbyError where
+    show PlayerAlreadyExists = "Player is already in game"
+    show LobbyIsFull = "The lobby is full."
+    show LobbyIsNotFull = "The lobby is not yet full."
 
 isFull :: Lobby -> Bool
 isFull (Lobby _ cap ps) = length ps == numPlayers cap
