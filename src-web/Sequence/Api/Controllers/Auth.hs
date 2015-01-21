@@ -3,6 +3,7 @@
 
 module Sequence.Api.Controllers.Auth where
 
+import Control.Applicative
 import Control.Concurrent
 import Control.Monad (when)
 import Control.Monad.Trans (liftIO)
@@ -25,17 +26,12 @@ import GHC.Generics
 import Network.HTTP.Types
 import Prelude hiding (exp) -- exp is used for expiration of a JWT from Web.JWT.
 import Sequence.Api.Error
+import Sequence.Api.Models.User
 import Web.JWT hiding (header)
 import Web.Scotty.Trans
 
 type UserList = MVar [User]
 type Authorizer = ActionT ErrorResult IO User
-
-data User = User
-    { unUserId :: UUID
-    , unUserName :: Text
-    , unEmailAddress :: Text
-    , unPassword :: BS.ByteString }
 
 data RegisterUserRequest = RegisterUserRequest
     { desiredUserName :: Text
@@ -69,24 +65,19 @@ auth key users = do
 
 register :: UserList -> ActionT ErrorResult IO ()
 register users = do
-    -- TODO: Validate email address.
     -- TODO: Validate user does not exist.
-    -- TODO: Validate password requirements.
-    requestBodyJson <- jsonData
-    registerUserRequest <-
-        if (DT.null . desiredUserName) requestBodyJson
-        then raise $ BadRequest "User name is empty."
-        else return requestBodyJson
+    rq <- jsonData
     userId <- liftIO nextRandom
-    let strength = 12
-    hashedSaltedPassword <- liftIO $ makePassword ((TE.encodeUtf8 . password) registerUserRequest) strength 
-    let user = User { unUserId = userId
-                    , unUserName = desiredUserName registerUserRequest
-                    , unEmailAddress = emailAddress registerUserRequest
-                    , unPassword = hashedSaltedPassword }
+    salt <- liftIO genSaltIO    
+    user <- do
+        let eitherUser = mkUser userId (desiredUserName rq) (emailAddress rq) salt (password rq)
+        case eitherUser of
+            Left err -> (raise . BadRequest . show) err 
+            Right u -> return u                 
     liftIO $ modifyMVar_ users (\us -> return $ user : us)
     status status201
-    
+    json user
+ 
 getToken :: Secret -> UserList -> ActionT ErrorResult IO ()
 getToken key users = do
     -- Verify user exists.

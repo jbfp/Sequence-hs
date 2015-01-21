@@ -19,6 +19,7 @@ import Network.Wai.Middleware.RequestLogger
 import Sequence.Api.Controllers.Auth
 import Sequence.Api.Error
 import Sequence.Api.Json ()
+import Sequence.Api.Models.User
 import Sequence.Capacity (mkCapacity)
 import Sequence.Game hiding (players)
 import Sequence.Lobby

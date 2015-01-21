@@ -63,4 +63,5 @@ executable Sequence.Api
   hs-source-dirs:     src-web
   other-modules:      
                       Sequence.Api.Controllers.Auth,
-                      Sequence.Api.Error
+                      Sequence.Api.Error,
+                      Sequence.Api.Models.User
