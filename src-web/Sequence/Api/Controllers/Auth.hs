@@ -49,14 +49,14 @@ data TokenRequest = TokenRequest
 instance FromJSON TokenRequest
 
 data JWTResponse = JWTResponse
-    { accessToken :: Text    
-    , expiresIn ::  Int }
+    { accessToken :: Text
+    , expires ::  Int }
 
 instance ToJSON JWTResponse where
     toJSON jwt =
-        object [ "access_token" .= accessToken jwt
-               , "token_type"   .= pack "bearer"
-               , "expires_in"   .= (show . expiresIn) jwt ]
+        object [ "accessToken" .= accessToken jwt
+               , "tokenType"   .= pack "bearer"
+               , "expires"   .= expires jwt ]
 
 auth :: Secret -> UserList -> ScottyT ErrorResult IO ()
 auth key users = do
@@ -102,7 +102,7 @@ mkJWT key user = do
         exp = intDate expires,
         sub = (stringOrURI . unUserName) user }
     let token = encodeSigned HS256 key cs
-    return JWTResponse { accessToken = token, expiresIn = round (expires - issuedAt) }
+    return JWTResponse { accessToken = token, expires = round expires }
         
 authorize :: Secret -> UserList -> ActionT ErrorResult IO User
 authorize key users = do
