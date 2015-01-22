@@ -9,9 +9,9 @@ import Data.UUID (UUID)
 import Sequence.Cards (Card)
 
 data Team = Red
-		  | Green
-		  | Blue
-		  deriving (Show, Read, Eq, Enum)
+          | Green
+          | Blue
+          deriving (Show, Read, Eq, Enum)
 
 data Player = Human UUID
             | Bot Text
