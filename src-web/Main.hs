@@ -4,10 +4,12 @@
 
 module Sequence.Api where
 
+import Control.Applicative
 import Control.Concurrent
 import Control.Monad (liftM)
 import Control.Monad.Trans (liftIO)
 import Data.Aeson hiding (json)
+import Data.Function (on)
 import Data.List
 import Data.Maybe
 import qualified Data.Text as T
@@ -21,7 +23,7 @@ import Sequence.Api.Error
 import Sequence.Api.Json ()
 import Sequence.Api.Models.User
 import Sequence.Capacity (mkCapacity)
-import Sequence.Game hiding (players)
+import Sequence.Game hiding (players, version)
 import Sequence.Lobby
 import Sequence.Player
 import Sequence.Seed
@@ -29,8 +31,16 @@ import System.Environment
 import Web.JWT hiding (header)
 import Web.Scotty.Trans
 
+data GameEventWrapper = GameEventWrapper
+    { event :: GameEvent
+    , aggregateId :: UUID
+    , version :: Int }
+  
+sortByVersion :: [GameEventWrapper] -> [GameEventWrapper]
+sortByVersion = sortBy (compare `on` version)
+
 type LobbyList = MVar [Lobby]
-type GameList = MVar [Game]
+type GameList = MVar [GameEventWrapper]
 type ActionResult = ActionT ErrorResult IO ()
 
 instance Parsable UUID where
@@ -126,26 +136,36 @@ postJoinLobby lobbyList gameList authorizer = do
             -- Start game if full.
             if isFull l then do
                 seed <- liftIO newSeed
-                let game = mkGame lId (players l) seed
-                liftIO $ modifyMVar_ gameList (\games -> return $ game : games)
-                json game
+                let either = start lId (players l) seed
+                
+                case either of
+                    Left e -> raise $ InternalServerError $ show e 
+                    Right gameEvent -> do
+                        let wrapped = GameEventWrapper gameEvent lId 0
+                        liftIO $ modifyMVar_ gameList (\games -> return $ wrapped : games)
+                        json $ replay [gameEvent]
             else json l
 
 getGames :: GameList -> Authorizer -> ActionResult
 getGames gameList authorizer = do
     _ <- authorizer
-    games <- liftIO $ withMVar gameList return
+    gameEventWrappers <- liftIO $ withMVar gameList return
+    let grouped = groupBy ((==) `on` aggregateId) gameEventWrappers
+    let gameEvents = fmap (fmap event . sortByVersion) grouped    
+    let games = fmap replay gameEvents
     json games
 
 getGame :: GameList -> Authorizer -> ActionResult
 getGame gameList authorizer = do
     _ <- authorizer
     gId <- param "gameId"
-    games <- liftIO $ withMVar gameList return
+    gameEvents <- liftIO $ withMVar gameList return    
+    let filtered = event <$> filter (\ g -> aggregateId g == gId) gameEvents
+    let game = replay filtered
     
-    case find (\g -> gameId g == gId) games of
-        Nothing -> raise NotFound
-        Just game -> json game
+    if game == zero
+    then raise NotFound
+    else json game
         
 getPlayerFromAuth :: Authorizer -> ActionT ErrorResult IO Player
 getPlayerFromAuth = liftM (Human . unUserId)    

@@ -1,17 +1,24 @@
 module Sequence.Game
 ( Game
+, GameError (..)
+, GameEvent (..)
 , gameId
 , deck
 , players
 , board
-, mkGame
+, version
+, replay
+, start
+, performMove
+, zero
 ) where
 
 import Control.Applicative ((<$>))
 import Control.Monad.State (runState)
+import Data.Function (on)
 import Data.Maybe (isNothing)
-import Data.UUID (UUID)
-import Sequence.Board (Board, getAllSequences, getTile, mkBoard, possibleSequences)
+import Data.UUID (UUID, nil)
+import Sequence.Board (Board, getAllSequences, getTile, mkBoard, possibleSequences, Row, Column)
 import Sequence.Cards (Card (..), dealHands, Deck, getNumCards, makeShuffledDeck)
 import Sequence.Player (hand, Player, PlayerState (..))
 import Sequence.Seed (Seed (..))
@@ -27,18 +34,48 @@ data GameError = GameIsNotOngoing
                | TileIsPartOfSequence
                deriving (Show)
 
+data GameEvent = Started UUID [Player] Seed
+               | MovePerformed Card Row Column Int
+
 data Game = GameT
     { gameId :: UUID  
     , deck :: Deck
     , players :: [PlayerState]
-    , board :: Board }
+    , board :: Board
+    , version :: Int }
+    
+instance Eq Game where
+    (==) = (==) `on` gameId
+
+start :: UUID -> [Player] -> Seed -> Either GameError GameEvent
+start uuid ps seed = Right $ Started uuid ps seed -- TODO: Validate
+
+performMove :: Game -> Card -> Row -> Column -> Either GameError GameEvent
+performMove game card row column = Right $ MovePerformed card row column (version game + 1) -- TODO: Validate
+
+zero :: Game
+zero = GameT
+    { gameId = nil
+    , deck = []
+    , players = []
+    , board = mkBoard
+    , version = 0 }
+    
+apply :: Game -> GameEvent -> Game
+apply game event = case event of
+    Started uuid ps seed -> mkGame uuid ps seed
+    MovePerformed card row column v -> game 
+
+replay :: [GameEvent] -> Game
+replay = foldl apply zero
 
 mkGame :: UUID -> [Player] -> Seed -> Game
 mkGame uuid ps (Seed seed) = GameT
     { gameId = uuid
     , deck = rest
     , players = mappedPlayers
-    , board = mkBoard }
+    , board = mkBoard
+    , version = 0 }
     where rng = mkStdGen seed
           shuffledDeck = makeShuffledDeck rng
           numPlayers = length ps

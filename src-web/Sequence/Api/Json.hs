@@ -27,7 +27,8 @@ instance ToJSON Capacity where
 instance ToJSON G.Game where
     toJSON game =
         object [ "id"      .= G.gameId game
-               , "players" .= (mapToPlayerViewModel <$> G.players game) ]
+               , "players" .= (mapToPlayerViewModel <$> G.players game)
+               , "version" .= G.version game ]
 
 mapToPlayerViewModel :: PlayerState -> PlayerViewModel
 mapToPlayerViewModel (PlayerState p cards t) = case p of
