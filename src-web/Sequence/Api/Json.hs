@@ -4,8 +4,9 @@
 
 module Sequence.Api.Json where
 
+import Control.Applicative
 import Data.Aeson ((.:), (.=), FromJSON, object, parseJSON, toJSON, ToJSON, Value (..))
-import Data.Text as T (pack)
+import qualified Data.Text as T
 import Data.UUID (UUID)
 import Sequence.Capacity
 import Sequence.Cards (Card (..))
@@ -25,8 +26,24 @@ instance ToJSON Capacity where
 
 instance ToJSON G.Game where
     toJSON game =
-        object [ "id"       .= G.gameId game
-               , "players"  .= G.players game ]
+        object [ "id"      .= G.gameId game
+               , "players" .= (mapToPlayerViewModel <$> G.players game) ]
+
+mapToPlayerViewModel :: PlayerState -> PlayerViewModel
+mapToPlayerViewModel (PlayerState p cards t) = case p of
+    Human uuid -> PlayerViewModel (T.pack $ show uuid) t cards
+    Bot name -> PlayerViewModel name t cards
+
+data PlayerViewModel = PlayerViewModel
+    { vmName :: T.Text
+    , vmTeam :: Team
+    , vmHand :: [Card] }
+
+instance ToJSON PlayerViewModel where
+    toJSON (PlayerViewModel n t h) =
+        object [ "name" .= n
+               , "team" .= t
+               , "hand" .= h ]
 
 instance ToJSON Team where
     toJSON t = String $ T.pack $ show t        
@@ -39,12 +56,10 @@ instance ToJSON PlayerState where
 
 instance ToJSON Player where
     toJSON (Human uuid) =
-        object [ "type" .= String "human"
-               , "id" .= uuid ]
+        object [ "name" .= show uuid ]
 
     toJSON (Bot name) =
-        object [ "type" .= String "bot"
-               , "name" .= name ]
+        object [ "name" .= name ]
 
 instance ToJSON Card where
     toJSON (Card s r) =
