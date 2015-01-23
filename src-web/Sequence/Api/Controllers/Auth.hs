@@ -5,7 +5,7 @@ module Sequence.Api.Controllers.Auth where
 
 import Control.Applicative
 import Control.Concurrent
-import Control.Monad (when)
+import Control.Monad (liftM, when)
 import Control.Monad.Trans (liftIO)
 import Crypto.PasswordStore
 import Data.Aeson hiding (json)
@@ -27,6 +27,7 @@ import Network.HTTP.Types
 import Prelude hiding (exp) -- exp is used for expiration of a JWT from Web.JWT.
 import Sequence.Api.Error
 import Sequence.Api.Models.User
+import Sequence.Player
 import Web.JWT hiding (header)
 import Web.Scotty.Trans
 
@@ -161,3 +162,6 @@ getUserByNameIO name users =
 
 getUserByName :: Text -> [User] -> Maybe User
 getUserByName name = find (\usr -> name == unUserName usr)
+
+getPlayerFromAuth :: Authorizer -> ActionT ErrorResult IO Player
+getPlayerFromAuth = liftM (Human . unUserId)

@@ -17,7 +17,7 @@ import qualified Sequence.Lobby as L
 instance ToJSON UUID where
     toJSON uuid = String $ T.pack $ show uuid
 
-    -- TODO: Turn orphan instances into view models + mapping functions. Ugh.  
+-- TODO: Turn orphan instances into view models + mapping functions. Ugh.  
 
 instance ToJSON Capacity where
     toJSON capacity = 

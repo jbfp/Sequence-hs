@@ -64,4 +64,7 @@ executable Sequence.Api
   other-modules:      
                       Sequence.Api.Controllers.Auth,
                       Sequence.Api.Error,
-                      Sequence.Api.Models.User
+                      Sequence.Api.Models.User,
+                      Sequence.Api.Controllers.Lobby,
+                      Sequence.Api.Models.Events,
+                      Sequence.Api.Parsables
